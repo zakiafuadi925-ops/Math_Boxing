@@ -1,0 +1,24 @@
+[2026-07-04T12:54:21.649Z][INFO] Command-line: 'C:\\Program Files\\Unity\\Hub\\Editor\\6000.5.2f1\\Editor\\Data\\Resources\\PackageManager\\Server\\UnityPackageManager.exe' server -s 28512 --ipc-path Unity-Upm-28512 -l 2 --log-file 'D:\\Game\\Math Boxing/Logs/upm.log'
+[2026-07-04T12:54:21.687Z][INFO] IPC server started (IPC path=Unity-Upm-28512).
+[2026-07-04T12:54:21.687Z][INFO] Hint: To connect to this UPM instance, launch Unity with the command-line parameter -upmIpcPath Upm-28512.
+[2026-07-04T12:54:27.052Z][INFO] project:list-packages <-- Request received
+params: {}
+[2026-07-04T12:54:27.156Z][INFO] project:list-packages --> 200 (104 ms)
+[2026-07-04T12:54:27.236Z][INFO] project:list-packages <-- Request received
+params: {}
+[2026-07-04T12:54:27.252Z][INFO] config:project:get-registries <-- Request received
+params: {}
+[2026-07-04T12:54:27.257Z][INFO] config:project:get-registries --> 200 (5 ms)
+[2026-07-04T12:54:27.344Z][INFO] project:list-packages --> 200 (108 ms)
+[2026-07-04T12:54:29.335Z][INFO] project:list-packages <-- Request received
+params: {}
+[2026-07-04T12:54:29.377Z][INFO] project:list-packages <-- Request received
+params: {}
+[2026-07-04T12:54:29.390Z][INFO] project:list-packages --> 200 (55 ms)
+[2026-07-04T12:54:29.426Z][INFO] project:list-packages --> 200 (50 ms)
+[2026-07-04T12:54:29.434Z][INFO] config:project:get-registries <-- Request received
+params: {}
+[2026-07-04T12:54:29.437Z][INFO] config:project:get-registries --> 200 (3 ms)
+[2026-07-04T12:54:32.033Z][INFO] project:list-packages <-- Request received
+params: {}
+[2026-07-04T12:54:32.084Z][INFO] project:list-packages --> 200 (50 ms)
