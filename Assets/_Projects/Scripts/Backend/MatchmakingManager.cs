@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.Networking;
 using System.Collections;
 using System.Text;
+using TMPro; // Tambahkan ini di baris atas bersama UnityEngine
 
 namespace MathBoxing.Backend
 {
@@ -9,9 +10,16 @@ namespace MathBoxing.Backend
     {
         [Header("Configuration Asset")]
         [SerializeField] private SupabaseConfig config;
+        [SerializeField] private SupabaseRealtimeListener realtimeListener; 
 
         [Header("Testing Rules (Untuk 2 Player)")]
         public bool forceAsPlayer1 = true;    // CENTANG INI UNTUK JADI HOST (P1)
+
+        [Header("UI Component")]
+        [SerializeField] private TMP_Text matchmakingTimerText; // Slot untuk menyeret teks timer
+
+        [Header("Timeout Rules")]
+        public float matchmakingTimeout = 30f; // Batas waktu menunggu dalam detik
 
         [Header("Match Info (Output)")]
         public string currentMatchId = ""; 
@@ -19,14 +27,15 @@ namespace MathBoxing.Backend
         public bool isMatchReady = false;
 
         private string myPlayerId;
+        private Coroutine createRoomCoroutineInstance;
 
         private const string SavedMatchIdKey = "TEMP_SIMULATED_MATCH_ID";
 
-        private void Start()
+        private void Awake()
         {
-            // PERBAIKAN RADIKAL: Hasilkan UUID murni tanpa embel-embel teks "PLAYER_"!
+            // Dijamin berjalan paling awal sebelum GameMatchController memanggil FindMatch!
             myPlayerId = System.Guid.NewGuid().ToString();
-            Debug.Log($"[Matchmaking] Player ID dikalibrasi ke UUID Steril: {myPlayerId}");
+            Debug.Log($"[Matchmaking] Player ID dikalibrasi ke UUID Steril via Awake: {myPlayerId}");
         }
 
         public void FindMatch()
@@ -34,13 +43,60 @@ namespace MathBoxing.Backend
             if (forceAsPlayer1)
             {
                 isPlayer1 = true;
-                StartCoroutine(CreateRoomCoroutine());
+                // Simpan instans coroutine agar bisa dihentikan paksa saat batal
+                createRoomCoroutineInstance = StartCoroutine(CreateRoomCoroutine());
             }
             else
             {
                 isPlayer1 = false;
                 string savedId = PlayerPrefs.GetString(SavedMatchIdKey, "");
                 StartCoroutine(JoinRoomCoroutine(savedId));
+            }
+        }
+
+        // Fungsi yang akan dipanggil oleh Tombol Cancel di UI kamu!
+        public void CancelMatchmaking()
+        {
+            Debug.Log("<color=red>[Matchmaking] Player membatalkan pencarian lawan secara manual!</color>");
+            
+            // 1. Hentikan coroutine pembuatan kamar jika masih berjalan
+            if (createRoomCoroutineInstance != null) StopCoroutine(createRoomCoroutineInstance);
+            
+            // 2. Matikan pendengar realtime agar tidak bocor memori
+            if (realtimeListener != null) realtimeListener.StopListening();
+
+            // 3. Jika kita adalah Host (P1) dan kamar sudah telanjur dibuat, HAPUS dari Supabase!
+            if (isPlayer1 && !string.IsNullOrEmpty(currentMatchId))
+            {
+                StartCoroutine(DeleteRoomFromServerCoroutine(currentMatchId));
+            }
+
+            // 4. Reset status internal
+            isMatchReady = false;
+            currentMatchId = "";
+        }
+
+        // Coroutine Timeout Otomatis (Dipanggil dari GameMatchController)
+        public IEnumerator StartTimeoutCountdown()
+        {
+            float timer = matchmakingTimeout;
+            while (timer > 0 && !isMatchReady)
+            {
+                timer -= Time.deltaTime;
+
+                // Perbarui angka di UI kamu setiap frame secara matematis!
+                if (matchmakingTimerText != null)
+                {
+                    // Menyformat angka desimal menjadi hitungan detik bulat (misal: "Sisa Waktu: 175s")
+                    matchmakingTimerText.text = $"Sisa Waktu: {Mathf.CeilToInt(timer)}s";
+                }
+                yield return null;
+            }
+
+            if (!isMatchReady)
+            {
+                Debug.LogWarning($"[Matchmaking] Waktu habis ({matchmakingTimeout}s)! Tidak ada lawan ditemukan.");
+                CancelMatchmaking();
             }
         }
 
@@ -85,6 +141,13 @@ namespace MathBoxing.Backend
                 {
                     Debug.Log($"<color=green>[Matchmaking] LUAR BIASA! Room P1 lolos sensor ERD dan tercetak di Supabase!</color>");
                     isMatchReady = false;
+
+                    // PICU LISTENER DETIK INI JUGA!
+                    if (realtimeListener != null)
+                    {
+                        realtimeListener.StartListening();
+                        Debug.Log("<color=yellow>[Matchmaking]</color> Memulai pipa pengawasan realtime untuk Player 1...");
+                    }
                 }
                 else
                 {
@@ -101,6 +164,8 @@ namespace MathBoxing.Backend
                 Debug.LogError("[Matchmaking] P2 GAGAL: Tidak menemukan data Room lama di memori! Jalankan P1 dulu!");
                 yield break;
             }
+
+            currentMatchId = targetMatchId;
 
             Debug.Log($"<color=cyan>[P2-Client]</color> Mencoba melakukan PATCH ke Match ID: {targetMatchId}");
             string url = $"{config.supabaseURL}/rest/v1/live_matches?match_id=eq.{targetMatchId}";
@@ -135,5 +200,35 @@ namespace MathBoxing.Backend
                 }
             }
         }
+
+        private IEnumerator DeleteRoomFromServerCoroutine(string matchId)
+        {
+            string url = $"{config.supabaseURL}/rest/v1/live_matches?match_id=eq.{matchId}";
+
+            using (UnityWebRequest request = new UnityWebRequest(url, "DELETE"))
+            {
+                request.SetRequestHeader("apikey", config.supabaseApiKey);
+                request.SetRequestHeader("Authorization", $"Bearer {config.supabaseApiKey}");
+
+                yield return request.SendWebRequest();
+
+                if (request.result == UnityWebRequest.Result.Success)
+                {
+                    Debug.Log($"<color=gray>[Matchmaking] Kamar {matchId} berhasil dibersihkan dari server Supabase.</color>");
+                }
+                else
+                {
+                    Debug.LogError($"[Matchmaking] Gagal menghapus kamar dari server: {request.error}");
+                }
+            }
+        }
+
+        private void OnDisable()
+        {
+            CancelMatchmaking();
+            StopAllCoroutines();
+            Debug.Log("<color=gray>[MatchmakingManager]</color> Coroutine jaringan dihentikan dengan aman.");
+        }
+        
     }
 }

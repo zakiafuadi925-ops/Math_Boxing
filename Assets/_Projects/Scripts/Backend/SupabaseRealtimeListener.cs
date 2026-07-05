@@ -18,7 +18,12 @@ namespace MathBoxing.Backend
 
         public void StartListening()
         {
-            if (matchmakingManager == null) matchmakingManager = FindObjectOfType<MatchmakingManager>();
+            if (matchmakingManager == null) matchmakingManager = GetComponent<MatchmakingManager>();
+            
+            if (matchmakingManager == null) matchmakingManager = Object.FindAnyObjectByType<MatchmakingManager>();
+            // Jaga-jaga jika dipanggil berulang kali
+            if (isListening) return; 
+
             isListening = true;
             StartCoroutine(PollMatchStatusCoroutine());
         }
@@ -26,6 +31,14 @@ namespace MathBoxing.Backend
         public void StopListening()
         {
             isListening = false;
+        }
+
+        // Otomatis dipicu oleh Unity saat kamu menekan tombol STOP di Editor
+        private void OnDisable()
+        {
+            StopListening();
+            StopAllCoroutines(); // Menghancurkan paksa seluruh coroutine agar GC Handle tidak rusak
+            Debug.Log("<color=gray>[Listener]</color> Pipa pengawasan dimatikan dengan aman. Memori disterilkan.");
         }
 
         private IEnumerator PollMatchStatusCoroutine()
