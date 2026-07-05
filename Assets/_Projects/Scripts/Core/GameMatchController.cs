@@ -135,7 +135,7 @@ namespace MathBoxing.Core
                 if (questionTextField != null) 
                 {
                     questionTextField.text = currentQuestion.questionText;
-                    Debug.Log($"[Controller] Soal Ditampilkan: {currentQuestion.questionText} | Kunci: {currentQuestion.correctAnswer}");
+                   
                 }
             }
             else
@@ -166,7 +166,7 @@ namespace MathBoxing.Core
             }
             else
             {
-                Debug.Log($"<color=red>Jawaban SALAH!</color> Input: {playerAnswer} | Kunci Seharusnya: {currentQuestion.correctAnswer}");
+                // Debug.Log($"<color=red>Jawaban SALAH!</color> Input: {playerAnswer} | Kunci Seharusnya: {currentQuestion.correctAnswer}");
                 if (numpadController != null) numpadController.TriggerWrongAnswerPenalty();
             }
         }
