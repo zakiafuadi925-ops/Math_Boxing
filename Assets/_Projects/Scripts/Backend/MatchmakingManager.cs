@@ -7,74 +7,66 @@ namespace MathBoxing.Backend
 {
     public class MatchmakingManager : MonoBehaviour
     {
-        [Header("Supabase Credentials")]
-        [SerializeField] private string supabaseURL = "https://YOUR_PROJECT_ID.supabase.co";
-        [SerializeField] private string supabaseApiKey = "YOUR_ANON_KEY";
+        [Header("Configuration Asset")]
+        [SerializeField] private SupabaseConfig config;
+
+        [Header("Testing Rules (Untuk 2 Player)")]
+        public bool forceAsPlayer1 = true;    // CENTANG INI UNTUK JADI HOST (P1)
 
         [Header("Match Info (Output)")]
-        public string currentMatchId = "";
+        public string currentMatchId = ""; 
         public bool isPlayer1 = false;
         public bool isMatchReady = false;
 
-        // ID unik player (sementara bisa pakai serial hardware atau random uuid)
         private string myPlayerId;
+
+        private const string SavedMatchIdKey = "TEMP_SIMULATED_MATCH_ID";
 
         private void Start()
         {
+            // PERBAIKAN RADIKAL: Hasilkan UUID murni tanpa embel-embel teks "PLAYER_"!
             myPlayerId = System.Guid.NewGuid().ToString();
+            Debug.Log($"[Matchmaking] Player ID dikalibrasi ke UUID Steril: {myPlayerId}");
         }
 
         public void FindMatch()
         {
-            StartCoroutine(FindOrCreateMatchCoroutine());
-        }
-
-        private IEnumerator FindOrCreateMatchCoroutine()
-        {
-            Debug.Log("[Matchmaking] Mencari pertandingan yang tersedia...");
-
-            // Kueri mencari match yang statusnya masih 'waiting' dan p2_id masih kosong
-            string checkUrl = $"{supabaseURL}/rest/v1/live_matches?status=eq.waiting&p2_id=is.null&limit=1";
-
-            using (UnityWebRequest request = UnityWebRequest.Get(checkUrl))
+            if (forceAsPlayer1)
             {
-                request.SetRequestHeader("apikey", supabaseApiKey);
-                request.SetRequestHeader("Authorization", $"Bearer {supabaseApiKey}");
-
-                yield return request.SendWebRequest();
-
-                if (request.result == UnityWebRequest.Result.Success && request.downloadHandler.text != "[]")
-                {
-                    // GAME SANGAT LOGIS: Jika ada room kosong, kita masuk sebagai Player 2!
-                    string jsonResponse = request.downloadHandler.text;
-                    
-                    // Ambil match_id dari string response secara manual (menghindari library json external)
-                    currentMatchId = ExtractValueFromJson(jsonResponse, "match_id");
-                    isPlayer1 = false;
-
-                    yield return StartCoroutine(JoinAsPlayer2(currentMatchId));
-                }
-                else
-                {
-                    // Jika tidak ada room, kita buat room baru dan bertindak sebagai Player 1!
-                    isPlayer1 = true;
-                    yield return StartCoroutine(CreateNewMatchRoom());
-                }
+                isPlayer1 = true;
+                StartCoroutine(CreateRoomCoroutine());
+            }
+            else
+            {
+                isPlayer1 = false;
+                string savedId = PlayerPrefs.GetString(SavedMatchIdKey, "");
+                StartCoroutine(JoinRoomCoroutine(savedId));
             }
         }
 
-        private IEnumerator CreateNewMatchRoom()
+        private IEnumerator CreateRoomCoroutine()
         {
-            string url = $"{supabaseURL}/rest/v1/live_matches";
+            if (config == null) { Debug.LogError("[Fatal] SupabaseConfig belum dipasang!"); yield break; }
+            
             currentMatchId = System.Guid.NewGuid().ToString();
+            PlayerPrefs.SetString(SavedMatchIdKey, currentMatchId);
+            PlayerPrefs.Save();
 
-            // Payload: status waiting, p1_id diisi, p1_score & p2_score mulai dari 0
+            Debug.Log($"<color=yellow>[P1-Host]</color> Menembak Kamar Baru Berdasarkan ERD: {currentMatchId}");
+
+            string url = $"{config.supabaseURL}/rest/v1/live_matches";
+
+            // Payload presisi memenuhi seluruh kolom NOT NULL (♦) di ERD kamu
             string jsonPayload = "{" +
                 $"\"match_id\":\"{currentMatchId}\"," +
                 $"\"p1_id\":\"{myPlayerId}\"," +
                 "\"status\":\"waiting\"," +
+                "\"current_question\":\"0+0\"," + 
+                "\"current_answer\":0," +          
+                "\"question_version\":1," +        
                 "\"p1_score\":0," +
-                "\"p2_score\":0" +
+                "\"p2_score\":0," +
+                "\"time_remaining\":60" +
                 "}";
 
             using (UnityWebRequest request = new UnityWebRequest(url, "POST"))
@@ -84,25 +76,35 @@ namespace MathBoxing.Backend
                 request.downloadHandler = new DownloadHandlerBuffer();
 
                 request.SetRequestHeader("Content-Type", "application/json");
-                request.SetRequestHeader("apikey", supabaseApiKey);
-                request.SetRequestHeader("Authorization", $"Bearer {supabaseApiKey}");
+                request.SetRequestHeader("apikey", config.supabaseApiKey);
+                request.SetRequestHeader("Authorization", $"Bearer {config.supabaseApiKey}");
 
                 yield return request.SendWebRequest();
 
-                if (request.result == UnityWebRequest.Result.Success)
+                if (request.result == UnityWebRequest.Result.Success || request.responseCode == 201)
                 {
-                    Debug.Log($"[Matchmaking] Room Berhasil Dibuat! ID: {currentMatchId}. Menunggu Player 2...");
-                    // Tetap tunggu sampai Player 2 bergabung
+                    Debug.Log($"<color=green>[Matchmaking] LUAR BIASA! Room P1 lolos sensor ERD dan tercetak di Supabase!</color>");
                     isMatchReady = false;
+                }
+                else
+                {
+                    Debug.LogError($"[Matchmaking] P1 GAGAL! Respon Aturan Database: {request.downloadHandler.text}");
                 }
             }
         }
 
-        private IEnumerator JoinAsPlayer2(string matchId)
+        private IEnumerator JoinRoomCoroutine(string targetMatchId)
         {
-            string url = $"{supabaseURL}/rest/v1/live_matches?match_id=eq.{matchId}";
+            if (config == null) yield break;
+            if (string.IsNullOrEmpty(targetMatchId))
+            {
+                Debug.LogError("[Matchmaking] P2 GAGAL: Tidak menemukan data Room lama di memori! Jalankan P1 dulu!");
+                yield break;
+            }
+
+            Debug.Log($"<color=cyan>[P2-Client]</color> Mencoba melakukan PATCH ke Match ID: {targetMatchId}");
+            string url = $"{config.supabaseURL}/rest/v1/live_matches?match_id=eq.{targetMatchId}";
             
-            // Update status menjadi 'active' dan isi p2_id
             string jsonPayload = "{" +
                 $"\"p2_id\":\"{myPlayerId}\"," +
                 "\"status\":\"active\"" +
@@ -115,26 +117,23 @@ namespace MathBoxing.Backend
                 request.downloadHandler = new DownloadHandlerBuffer();
 
                 request.SetRequestHeader("Content-Type", "application/json");
-                request.SetRequestHeader("apikey", supabaseApiKey);
-                request.SetRequestHeader("Authorization", $"Bearer {supabaseApiKey}");
+                request.SetRequestHeader("apikey", config.supabaseApiKey);
+                request.SetRequestHeader("Authorization", $"Bearer {config.supabaseApiKey}");
+                request.SetRequestHeader("Prefer", "return=representation");
 
                 yield return request.SendWebRequest();
 
-                if (request.result == UnityWebRequest.Result.Success)
+                if (request.result == UnityWebRequest.Result.Success || request.responseCode == 200)
                 {
-                    Debug.Log($"[Matchmaking] Sukses Masuk ke Match: {matchId} sebagai Player 2! Game Dimulai!");
+                    currentMatchId = targetMatchId;
+                    Debug.Log($"<color=green>[Matchmaking] SUKSES! Kamu masuk sebagai Player 2. Pertandingan AKTIF!</color>");
                     isMatchReady = true;
                 }
+                else
+                {
+                    Debug.LogError($"[Matchmaking] P2 GAGAL! Kode HTTP: {request.responseCode} | Error: {request.error} | Respon: {request.downloadHandler.text}");
+                }
             }
-        }
-
-        private string ExtractValueFromJson(string json, string key)
-        {
-            int keyIndex = json.IndexOf($"\"{key}\":\"");
-            if (keyIndex == -1) return "";
-            int startIndex = keyIndex + key.Length + 4;
-            int endIndex = json.IndexOf("\"", startIndex);
-            return json.Substring(startIndex, endIndex - startIndex);
         }
     }
 }

@@ -9,9 +9,9 @@ namespace MathBoxing.Backend
         [Header("References")]
         [SerializeField] private MatchmakingManager matchmakingManager;
 
-        [Header("Supabase Credentials")]
-        [SerializeField] private string supabaseURL = "https://YOUR_PROJECT_ID.supabase.co";
-        [SerializeField] private string supabaseApiKey = "YOUR_ANON_KEY";
+        [Header("Configuration Asset")]
+        [SerializeField] private SupabaseConfig config; // Tarik file asset ke sini
+        [SerializeField] private string tableName = "live_matches";
 
         private bool isListening = false;
         public int opponentScore = 0;
@@ -38,12 +38,12 @@ namespace MathBoxing.Backend
                     continue;
                 }
 
-                string url = $"{supabaseURL}/rest/v1/live_matches?match_id=eq.{matchmakingManager.currentMatchId}&select=*";
+                string url = $"{config.supabaseURL}/rest/v1/{tableName}?match_id=eq.{matchmakingManager.currentMatchId}&select=*";
 
                 using (UnityWebRequest request = UnityWebRequest.Get(url))
                 {
-                    request.SetRequestHeader("apikey", supabaseApiKey);
-                    request.SetRequestHeader("Authorization", $"Bearer {supabaseApiKey}");
+                    request.SetRequestHeader("apikey", config.supabaseApiKey);
+                    request.SetRequestHeader("Authorization", $"Bearer {config.supabaseApiKey}");
 
                     yield return request.SendWebRequest();
 

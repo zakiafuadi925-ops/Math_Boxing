@@ -7,21 +7,16 @@ namespace MathBoxing.Core
 {
     public class GameMatchController : MonoBehaviour
     {
-        [Header("Multiplayer Net")]
-        [SerializeField] private MathBoxing.Backend.MatchmakingManager matchmakingManager;
-        [SerializeField] private MathBoxing.Backend.SupabaseRealtimeListener realtimeListener;
-        [SerializeField] private MathBoxing.Backend.SupabaseManager supabaseManager;
-
         [Header("References")]
         [SerializeField] private MathBoxing.UI.NumpadController numpadController;
         [SerializeField] private MathGenerator mathGenerator; 
         [SerializeField] private TextMeshProUGUI questionTextField;
         [SerializeField] private TextMeshProUGUI timerTextField; 
 
-        // Hubungkan ke skrip SupabaseManager baru kita
-        [Header("Backend Integration")]
+        [Header("Multiplayer Net & Config")]
+        [SerializeField] private MathBoxing.Backend.MatchmakingManager matchmakingManager;
+        [SerializeField] private MathBoxing.Backend.SupabaseRealtimeListener realtimeListener;
         [SerializeField] private MathBoxing.Backend.SupabaseManager supabaseManager;
-        [SerializeField] private string currentPlayerName = "Player_Ryzen"; // Nama sementara sebelum sistem Auth aktif
 
         [Header("Game Over UI Components")]
         [SerializeField] private GameObject gameOverPanel; 
@@ -48,11 +43,41 @@ namespace MathBoxing.Core
 
         private void Start()
         {
-            if (mathGenerator == null) mathGenerator = FindObjectOfType<MathGenerator>();
-            if (supabaseManager == null) supabaseManager = FindObjectOfType<MathBoxing.Backend.SupabaseManager>();
+            // Menggunakan FindAnyObjectByType yang modern untuk menghindari warning depresi Unity
+            if (mathGenerator == null) 
+                mathGenerator = FindAnyObjectByType<MathGenerator>();
+                
+            if (supabaseManager == null) 
+                supabaseManager = FindAnyObjectByType<MathBoxing.Backend.SupabaseManager>();
+                
+            if (matchmakingManager == null) 
+                matchmakingManager = FindAnyObjectByType<MathBoxing.Backend.MatchmakingManager>(); // Perbaikan Namespace murni
+                
+            if (realtimeListener == null) 
+                realtimeListener = FindAnyObjectByType<MathBoxing.Backend.SupabaseRealtimeListener>();
             
-            if (gameOverPanel != null) gameOverPanel.SetActive(false);
+            if (gameOverPanel != null) 
+                gameOverPanel.SetActive(false);
 
+            StartCoroutine(WaitForMatchmakingCoroutine());
+        }
+
+        private IEnumerator WaitForMatchmakingCoroutine()
+        {
+            if (matchmakingManager != null)
+            {
+                matchmakingManager.FindMatch();
+                
+                // Tunggu sampai room penuh / ready
+                while (!matchmakingManager.isMatchReady)
+                {
+                    if (questionTextField != null) questionTextField.text = "Mencari Lawan...";
+                    yield return null;
+                }
+            }
+
+            // Setelah match ready, aktifkan listener realtime dan mulai game!
+            if (realtimeListener != null) realtimeListener.StartListening();
             StartMatch();
         }
 
@@ -96,7 +121,7 @@ namespace MathBoxing.Core
                 totalScore += currentQuestion.scoreValue;
                 Debug.Log($"<color=green>Jawaban BENAR!</color> +{currentQuestion.scoreValue} Poin. Total: {totalScore}");
                 
-                // TEMBAKKAN SKOR SECARA REALTIME KE TABEL LIVE_MATCHES SESUAI ROLE!
+                // Tembakkan pembaruan skor ke server secara realtime berdasarkan role kita (p1 atau p2)
                 if (supabaseManager != null && matchmakingManager != null)
                 {
                     supabaseManager.UpdateMatchScore(matchmakingManager.currentMatchId, matchmakingManager.isPlayer1, totalScore);
@@ -118,17 +143,10 @@ namespace MathBoxing.Core
             if (timerTextField != null) timerTextField.text = "TIME UP!";
             if (questionTextField != null) questionTextField.text = "FINISHED";
 
+            if (realtimeListener != null) realtimeListener.StopListening();
+
             if (gameOverPanel != null) gameOverPanel.SetActive(true);
-
             if (finalScoreTextField != null) finalScoreTextField.text = $"FINAL SCORE: {totalScore}";
-
-            Debug.Log($"<color=yellow>Pertandingan Selesai!</color> Skor Akhir: {totalScore}");
-
-            // DI SINI TEMBAKAN API DIKIRIMKAN!
-            if (supabaseManager != null)
-            {
-                supabaseManager.SaveScore(currentPlayerName, totalScore);
-            }
         }
 
         public void RetryGame()
