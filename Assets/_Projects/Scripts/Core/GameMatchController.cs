@@ -13,6 +13,9 @@ namespace MathBoxing.Core
         [SerializeField] private TextMeshProUGUI questionTextField;
         [SerializeField] private TextMeshProUGUI timerTextField; 
 
+        [Header("Visual & Animations")]
+        [SerializeField] private Animator player1Animator;
+
         [Header("Multiplayer Net & Config")]
         [SerializeField] private MathBoxing.Backend.MatchmakingManager matchmakingManager;
         [SerializeField] private MathBoxing.Backend.SupabaseRealtimeListener realtimeListener;
@@ -150,26 +153,32 @@ namespace MathBoxing.Core
 
             if (playerAnswer == currentQuestion.correctAnswer)
             {
-                // 1. Tambahkan skor lokal secara instan
                 totalScore += currentQuestion.scoreValue;
                 Debug.Log($"<color=green>Jawaban BENAR!</color> +{currentQuestion.scoreValue} Poin. Total: {totalScore}");
                 
-                // 2. KALIBRASI: Amankan visual terlebih dahulu!
-                // Munculkan soal berikutnya DETIK INI JUGA tanpa menunggu jaringan!
-                StartNewQuestion();
+                // VISUALISASI: Picu animasi memukul detik ini juga!
+                if (player1Animator != null)
+                {
+                    player1Animator.SetTrigger("IsAttacking");
+                }
 
-                // 3. Tembakkan pembaruan skor ke server di latar belakang (Fire-and-Forget)
                 if (supabaseManager != null && matchmakingManager != null)
                 {
                     supabaseManager.UpdateMatchScore(matchmakingManager.currentMatchId, matchmakingManager.isPlayer1, totalScore);
                 }
+
+                StartNewQuestion();
             }
             else
             {
-                // Debug.Log($"<color=red>Jawaban SALAH!</color> Input: {playerAnswer} | Kunci Seharusnya: {currentQuestion.correctAnswer}");
+                Debug.Log("<color=red>Jawaban SALAH!</color>");
+                
+                // VISUALISASI: Bisa kamu tambahkan trigger "IsHit" jika player dihantam balik
+                
                 if (numpadController != null) numpadController.TriggerWrongAnswerPenalty();
             }
         }
+        
         private void EndMatch()
         {
             isGameActive = false;
