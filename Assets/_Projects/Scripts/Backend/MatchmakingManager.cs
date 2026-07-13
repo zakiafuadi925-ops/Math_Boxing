@@ -229,6 +229,18 @@ namespace MathBoxing.Backend
             StopAllCoroutines();
             Debug.Log("<color=gray>[MatchmakingManager]</color> Coroutine jaringan dihentikan dengan aman.");
         }
+
+        // ========================================================================
+        // SUNTIKAN KODE: JEMBATAN REALTIME UNTUK PLAYER 1
+        // ========================================================================
+        public void OnOpponentJoined()
+        {
+            if (isPlayer1)
+            {
+                Debug.Log("<color=green>[Matchmaking] Sinyal Realtime Diterima! Player 2 telah menginvasi kamar. Pertandingan SIAP!</color>");
+                isMatchReady = true; // <── Ini yang akan memicu GameMatchController untuk START GAME!
+            }
+        }
         
     }
 }

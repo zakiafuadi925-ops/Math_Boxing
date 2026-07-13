@@ -22,6 +22,12 @@ namespace MathBoxing.Backend
             
             if (matchmakingManager == null) matchmakingManager = Object.FindAnyObjectByType<MatchmakingManager>();
             // Jaga-jaga jika dipanggil berulang kali
+            // Di dalam skrip SupabaseRealtimeListener milikmu, saat mendeteksi P2 join:
+            if (matchmakingManager != null)
+            {
+                matchmakingManager.OnOpponentJoined();
+            }
+
             if (isListening) return; 
 
             isListening = true;
