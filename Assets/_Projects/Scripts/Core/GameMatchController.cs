@@ -10,11 +10,12 @@ namespace MathBoxing.Core
         [Header("References")]
         [SerializeField] private MathBoxing.UI.NumpadController numpadController;
         [SerializeField] private MathGenerator mathGenerator; 
-        [SerializeField] private TextMeshProUGUI questionTextField;
-        [SerializeField] private TextMeshProUGUI timerTextField; 
+        [SerializeField] private TextMeshProUGUI questionTextField; // Ini adalah display_text di dalam UI_Display_Panel
+        [SerializeField] private TextMeshProUGUI timerTextField;   // Ini Teks di dalam Timer_Panel
 
         [Header("Visual & Animations")]
         [SerializeField] private Animator player1Animator;
+        [SerializeField] private Animator player2Animator; // PERBAIKAN: Referensi wajib untuk mengeksekusi musuh!
 
         [Header("Multiplayer Net & Config")]
         [SerializeField] private MathBoxing.Backend.MatchmakingManager matchmakingManager;
@@ -26,7 +27,7 @@ namespace MathBoxing.Core
         [SerializeField] private TextMeshProUGUI finalScoreTextField; 
 
         [Header("UI Panels")]
-        [SerializeField] private GameObject matchmakingPanel; // Seret Matchmaking_Panel ke sini!
+        [SerializeField] private GameObject matchmakingPanel; // PENTING: Jangan diisi Timer_Panel lagi! Isi dengan UI_Display_Panel atau objek panel matchmaking khusus.
 
         [Header("Score System")]
         [SerializeField] private int totalScore = 0; 
@@ -49,6 +50,7 @@ namespace MathBoxing.Core
 
         private void Start()
         {
+            // Validasi pencarian komponen secara otomatis pada PC Ryzen milikmu
             if (mathGenerator == null) 
                 mathGenerator = FindAnyObjectByType<MathGenerator>();
                 
@@ -78,6 +80,7 @@ namespace MathBoxing.Core
                     StartCoroutine(matchmakingManager.StartTimeoutCountdown());
                 }
                 
+                // Nyalakan panel pencarian di awal fase steril
                 if (matchmakingPanel != null) matchmakingPanel.SetActive(true);
                 if (questionTextField != null) questionTextField.text = "Mencari Lawan...";
 
@@ -91,14 +94,11 @@ namespace MathBoxing.Core
                     yield return null;
                 }
 
-                // ============================================================
-                // MOMEN SINKRONISASI VISUAL & LOGIKA (PERMAINAN DIMULAI)
-                // ============================================================
-                Debug.Log("<color=green>[Controller] Pertandingan SIAP! Menutup panel penantian...</color>");
+                Debug.Log("<color=green>[Controller] Pertandingan ready! Menutup panel matchmaking...</color>");
                 
+                // Matikan panel matchmaking karena pertandingan segera dimulai
                 if (matchmakingPanel != null) matchmakingPanel.SetActive(false);
 
-                // PERBAIKAN MUTLAK: Panggil StartMatch() agar status game aktif & timer berdetak!
                 StartMatch(); 
             }
         }
@@ -108,10 +108,10 @@ namespace MathBoxing.Core
             Debug.Log("<color=cyan>[Controller] Memulai inisiasi ring pertarungan matematika!</color>");
             totalScore = 0;
             timeRemaining = 60f; 
-            isGameActive = true; // Kunci pengaman numpad terbuka detik ini!
+            isGameActive = true; 
             
-            StartNewQuestion(); // Generate pertanyaan pertama lewat generator resmi kamu
-            StartCoroutine(MatchTimerCoroutine()); // Hidupkan bom waktu pertandingan
+            StartNewQuestion(); 
+            StartCoroutine(MatchTimerCoroutine()); 
         }
 
         private IEnumerator MatchTimerCoroutine()
@@ -119,7 +119,7 @@ namespace MathBoxing.Core
             while (timeRemaining > 0 && isGameActive)
             {
                 if (timerTextField != null) 
-                    timerTextField.text = $"Time: {Mathf.CeilToInt(timeRemaining)}s";
+                    timerTextField.text = $"Sisa Waktu: {Mathf.CeilToInt(timeRemaining)}s"; // Kalibrasi teks agar sesuai estetika barumu
                 
                 yield return new WaitForSeconds(1f);
                 timeRemaining--;
@@ -133,12 +133,10 @@ namespace MathBoxing.Core
 
             if (mathGenerator != null)
             {
-                // Menggunakan generator resmi kamu agar sinkron dengan sistem pengecekan
                 currentQuestion = mathGenerator.GenerateRandomQuestion();
                 if (questionTextField != null) 
                 {
                     questionTextField.text = currentQuestion.questionText;
-                   
                 }
             }
             else
@@ -156,11 +154,9 @@ namespace MathBoxing.Core
                 totalScore += currentQuestion.scoreValue;
                 Debug.Log($"<color=green>Jawaban BENAR!</color> +{currentQuestion.scoreValue} Poin. Total: {totalScore}");
                 
-                // VISUALISASI: Picu animasi memukul detik ini juga!
-                if (player1Animator != null)
-                {
-                    player1Animator.SetTrigger("IsAttacking");
-                }
+                // SINKRONISASI AKSI: Player 1 Memukul, Player 2 Terhantam!
+                if (player1Animator != null) player1Animator.SetTrigger("IsAttacking");
+                if (player2Animator != null) player2Animator.SetTrigger("IsHit"); 
 
                 if (supabaseManager != null && matchmakingManager != null)
                 {
@@ -173,8 +169,10 @@ namespace MathBoxing.Core
             {
                 Debug.Log("<color=red>Jawaban SALAH!</color>");
                 
-                // VISUALISASI: Bisa kamu tambahkan trigger "IsHit" jika player dihantam balik
-                
+                // HUKUMAN: Player 1 justru terhantam oleh Player 2 jika salah menjawab!
+                if (player1Animator != null) player1Animator.SetTrigger("IsHit");
+                if (player2Animator != null) player2Animator.SetTrigger("IsAttacking");
+
                 if (numpadController != null) numpadController.TriggerWrongAnswerPenalty();
             }
         }
@@ -202,4 +200,4 @@ namespace MathBoxing.Core
             Application.Quit();
         }
     }
-}
+} //Commit 13/07/2-26
