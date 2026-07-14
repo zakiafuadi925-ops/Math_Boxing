@@ -26,11 +26,16 @@ namespace MathBoxing.Core
         [SerializeField] private GameObject gameOverPanel; 
         [SerializeField] private TextMeshProUGUI finalScoreTextField; 
 
+        [Header("Score System")]
+        [SerializeField] private int totalScore = 0; 
+
+        // --- SUNTIKAN KODE BARU UNTUK PELACAK COROUTINE ---
+        private Coroutine player1ResetCoroutine;
+        private Coroutine player2ResetCoroutine;
+
         [Header("UI Panels")]
         [SerializeField] private GameObject matchmakingPanel; // PENTING: Jangan diisi Timer_Panel lagi! Isi dengan UI_Display_Panel atau objek panel matchmaking khusus.
 
-        [Header("Score System")]
-        [SerializeField] private int totalScore = 0; 
 
         [Header("Timer Settings")]
         [SerializeField] private float timeRemaining = 60f; 
@@ -145,7 +150,7 @@ namespace MathBoxing.Core
             }
         }
 
-        private void HandleAnswerSubmitted(int playerAnswer)
+       private void HandleAnswerSubmitted(int playerAnswer)
         {
             if (!isGameActive) return; 
 
@@ -154,21 +159,22 @@ namespace MathBoxing.Core
                 totalScore += currentQuestion.scoreValue;
                 Debug.Log($"<color=green>Jawaban BENAR!</color> +{currentQuestion.scoreValue} Poin. Total: {totalScore}");
                 
-                // Pilih jenis pukulan secara acak (1 = Jab, 2 = Cross, 3 = Uppercut, 4 = Hook)
                 int randomAttack = Random.Range(1, 5); 
 
-                // ELEMEN AKSI: Player 1 mengeksekusi serangan acak
+                // ELEMEN AKSI: Player 1 (Matikan coroutine lama jika ada, lalu jalankan yang baru)
                 if (player1Animator != null)
                 {
+                    if (player1ResetCoroutine != null) StopCoroutine(player1ResetCoroutine);
                     player1Animator.SetInteger("actionType", randomAttack); 
-                    StartCoroutine(ResetActionTypeCoroutine(player1Animator));
+                    player1ResetCoroutine = StartCoroutine(ResetActionTypeCoroutine(player1Animator, 1));
                 }
 
-                // ELEMEN REAKSI: Player 2 otomatis tereksekusi dengan actionType = 6 (Boxer_Hit)
+                // ELEMEN REAKSI: Player 2 
                 if (player2Animator != null)
                 {
-                    player2Animator.SetInteger("actionType", 6); 
-                    StartCoroutine(ResetActionTypeCoroutine(player2Animator));
+                    if (player2ResetCoroutine != null) StopCoroutine(player2ResetCoroutine);
+                    player2Animator.SetInteger("actionType", 6); // Boxer_Hit
+                    player2ResetCoroutine = StartCoroutine(ResetActionTypeCoroutine(player2Animator, 2));
                 }
 
                 if (supabaseManager != null && matchmakingManager != null)
@@ -182,19 +188,20 @@ namespace MathBoxing.Core
             {
                 Debug.Log("<color=red>Jawaban SALAH!</color>");
                 
-                // HUKUMAN: Kondisi dibalik! Player 2 memukul acak, Player 1 terkena hit (6)
                 int randomEnemyAttack = Random.Range(1, 5);
 
                 if (player1Animator != null)
                 {
-                    player1Animator.SetInteger("actionType", 6); // Player 1 terhantam
-                    StartCoroutine(ResetActionTypeCoroutine(player1Animator));
+                    if (player1ResetCoroutine != null) StopCoroutine(player1ResetCoroutine);
+                    player1Animator.SetInteger("actionType", 6); // Player 1 kena hit
+                    player1ResetCoroutine = StartCoroutine(ResetActionTypeCoroutine(player1Animator, 1));
                 }
                 
                 if (player2Animator != null)
                 {
+                    if (player2ResetCoroutine != null) StopCoroutine(player2ResetCoroutine);
                     player2Animator.SetInteger("actionType", randomEnemyAttack); // Player 2 memukul
-                    StartCoroutine(ResetActionTypeCoroutine(player2Animator));
+                    player2ResetCoroutine = StartCoroutine(ResetActionTypeCoroutine(player2Animator, 2));
                 }
                 
                 if (numpadController != null) numpadController.TriggerWrongAnswerPenalty();
@@ -202,14 +209,19 @@ namespace MathBoxing.Core
         }
 
         // Coroutine pembantu untuk mengembalikan sirkuit ke Boxer_Idle (actionType = 0)
-        private IEnumerator ResetActionTypeCoroutine(Animator targetAnimator)
+        private IEnumerator ResetActionTypeCoroutine(Animator targetAnimator, int playerIndex)
         {
-            // Beri jeda sepersekian detik agar transisi animasi sempat meledak di layar
-            yield return new WaitForSeconds(0.6f); 
+            // Gunakan jeda waktu yang sangat singkat agar game terasa responsif (cth: 0.2 detik)
+            yield return new WaitForSeconds(0.2f); 
+            
             if (targetAnimator != null)
             {
                 targetAnimator.SetInteger("actionType", 0); 
             }
+
+            // Kosongkan referensi pelacak setelah reset berhasil diselesaikan
+            if (playerIndex == 1) player1ResetCoroutine = null;
+            if (playerIndex == 2) player2ResetCoroutine = null;
         }
 
         
