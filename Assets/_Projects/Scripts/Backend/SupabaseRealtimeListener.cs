@@ -16,6 +16,12 @@ namespace MathBoxing.Backend
         private bool isListening = false;
         public int opponentScore = 0;
 
+        // --- SUNTIKAN EVENT BARU ---
+        public delegate void OpponentScoreChangedHandler(int newScore);
+        public event OpponentScoreChangedHandler OnOpponentScoreChanged;
+
+        // ... sisa variabel dan referensi awal tetap sama ...
+
         public void StartListening()
         {
             if (matchmakingManager == null) matchmakingManager = GetComponent<MatchmakingManager>();
@@ -93,6 +99,7 @@ namespace MathBoxing.Backend
                                     opponentScore = parsedScore;
                                     Debug.Log($"<color=orange>[Realtime]</color> Skor musuh berubah menjadi: {opponentScore}! Petinju musuh bersiap memukul!");
                                     // TODO: Trigger animasi petinju musuh memukul wajah kita di sini!
+                                    OnOpponentScoreChanged?.Invoke(opponentScore);
                                 }
                             }
                         }

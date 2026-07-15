@@ -53,6 +53,9 @@ public class BoxerActionController : MonoBehaviour
             case 5: // Contoh: Tombol 5 memicu Dodge
                 TriggerAnimationAction(5);
                 break;
+            case 6: // Contoh: Tombol 6 memicu isHit
+                TriggerAnimationAction(6);
+                break;
             default:
                 // Jika tombol lain belum dipetakan, paksa kembali bersiap ke Idle
                 TriggerAnimationAction(0);

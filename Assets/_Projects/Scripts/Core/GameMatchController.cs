@@ -110,6 +110,8 @@ namespace MathBoxing.Core
 
         private void StartMatch()
         {
+            if (player1Animator != null) player1Animator.speed = 1f;
+            if (player2Animator != null) player2Animator.speed = 1f;
             Debug.Log("<color=cyan>[Controller] Memulai inisiasi ring pertarungan matematika!</color>");
             totalScore = 0;
             timeRemaining = 60f; 
