@@ -46,11 +46,15 @@ namespace MathBoxing.Core
         private void OnEnable()
         {
             if (numpadController != null) numpadController.OnAnswerSubmitted += HandleAnswerSubmitted;
+
+            if (realtimeListener != null) realtimeListener.OnOpponentScoreChanged += HandleOpponentAttacked;
         }
 
         private void OnDisable()
         {
             if (numpadController != null) numpadController.OnAnswerSubmitted -= HandleAnswerSubmitted;
+
+            if (realtimeListener != null) realtimeListener.OnOpponentScoreChanged -= HandleOpponentAttacked;
         }
 
         private void Start()
@@ -152,78 +156,107 @@ namespace MathBoxing.Core
             }
         }
 
-       private void HandleAnswerSubmitted(int playerAnswer)
+        private void HandleAnswerSubmitted(int playerAnswer)
         {
-            if (!isGameActive) return; 
+            if (!isGameActive) return; //[cite: 2]
 
             if (playerAnswer == currentQuestion.correctAnswer)
             {
-                totalScore += currentQuestion.scoreValue;
-                Debug.Log($"<color=green>Jawaban BENAR!</color> +{currentQuestion.scoreValue} Poin. Total: {totalScore}");
+                totalScore += currentQuestion.scoreValue; //[cite: 2]
+                Debug.Log($"<color=green>Jawaban BENAR!</color> +{currentQuestion.scoreValue} Poin. Total: {totalScore}"); //[cite: 2]
                 
+                // Pilihan serangan Player 1: 1 (Jab), 2 (Cross), 3 (Uppercut), 4 (Hook)
+                // Batas atas eksklusif, jadi tulis 5 agar angka 4 bisa keluar.
                 int randomAttack = Random.Range(1, 5); 
 
-                // ELEMEN AKSI: Player 1 (Matikan coroutine lama jika ada, lalu jalankan yang baru)
+                // ELEMEN AKSI: Player 1 Memukul (1-4)
                 if (player1Animator != null)
                 {
-                    if (player1ResetCoroutine != null) StopCoroutine(player1ResetCoroutine);
-                    player1Animator.SetInteger("actionType", randomAttack); 
-                    player1ResetCoroutine = StartCoroutine(ResetActionTypeCoroutine(player1Animator, 1));
+                    if (player1ResetCoroutine != null) StopCoroutine(player1ResetCoroutine); //[cite: 2]
+                    player1Animator.SetInteger("actionType", randomAttack); //[cite: 2]
+                    player1ResetCoroutine = StartCoroutine(ResetActionTypeCoroutine(player1Animator, 1)); //[cite: 2]
                 }
 
-                // ELEMEN REAKSI: Player 2 
+                // ELEMEN REAKSI: Player 2 Terkena Hit (6 = Terkena Hit)
                 if (player2Animator != null)
                 {
-                    if (player2ResetCoroutine != null) StopCoroutine(player2ResetCoroutine);
-                    player2Animator.SetInteger("actionType", 6); // Boxer_Hit
-                    player2ResetCoroutine = StartCoroutine(ResetActionTypeCoroutine(player2Animator, 2));
+                    if (player2ResetCoroutine != null) StopCoroutine(player2ResetCoroutine); //[cite: 2]
+                    player2Animator.SetInteger("actionType", 6); 
+                    player2ResetCoroutine = StartCoroutine(ResetActionTypeCoroutine(player2Animator, 2)); //[cite: 2]
                 }
 
                 if (supabaseManager != null && matchmakingManager != null)
                 {
-                    supabaseManager.UpdateMatchScore(matchmakingManager.currentMatchId, matchmakingManager.isPlayer1, totalScore);
+                    supabaseManager.UpdateMatchScore(matchmakingManager.currentMatchId, matchmakingManager.isPlayer1, totalScore); //[cite: 2]
                 }
 
-                StartNewQuestion();
+                StartNewQuestion(); //[cite: 2]
             }
             else
             {
-                Debug.Log("<color=red>Jawaban SALAH!</color>");
+                Debug.Log("<color=red>Jawaban SALAH!</color>"); //[cite: 2]
                 
-                int randomEnemyAttack = Random.Range(1, 5);
+                // Pilihan serangan musuh (Player 2) ke kita: 1 s/d 4
+                int randomEnemyAttack = Random.Range(1, 5); 
 
+                // Player 1 Terkena Hit (6)
                 if (player1Animator != null)
                 {
-                    if (player1ResetCoroutine != null) StopCoroutine(player1ResetCoroutine);
-                    player1Animator.SetInteger("actionType", 6); // Player 1 kena hit
-                    player1ResetCoroutine = StartCoroutine(ResetActionTypeCoroutine(player1Animator, 1));
+                    if (player1ResetCoroutine != null) StopCoroutine(player1ResetCoroutine); //[cite: 2]
+                    player1Animator.SetInteger("actionType", 6); 
+                    player1ResetCoroutine = StartCoroutine(ResetActionTypeCoroutine(player1Animator, 1)); //[cite: 2]
                 }
                 
+                // Player 2 (Musuh) Memukul (1-4)
                 if (player2Animator != null)
                 {
-                    if (player2ResetCoroutine != null) StopCoroutine(player2ResetCoroutine);
-                    player2Animator.SetInteger("actionType", randomEnemyAttack); // Player 2 memukul
-                    player2ResetCoroutine = StartCoroutine(ResetActionTypeCoroutine(player2Animator, 2));
+                    if (player2ResetCoroutine != null) StopCoroutine(player2ResetCoroutine); //[cite: 2]
+                    player2Animator.SetInteger("actionType", randomEnemyAttack); 
+                    player2ResetCoroutine = StartCoroutine(ResetActionTypeCoroutine(player2Animator, 2)); //[cite: 2]
                 }
                 
-                if (numpadController != null) numpadController.TriggerWrongAnswerPenalty();
+                if (numpadController != null) numpadController.TriggerWrongAnswerPenalty(); //[cite: 2]
             }
         }
 
-        // Coroutine pembantu untuk mengembalikan sirkuit ke Boxer_Idle (actionType = 0)
+        // --- JALUR PIPA MULTIPLAYER: SAAT LAWAN BERHASIL MENJAWAB BENAR DI LAYARNYA ---
+        private void HandleOpponentAttacked(int newOpponentScore)
+        {
+            Debug.Log($"<color=magenta>[Realtime] Lawan menyerang! Skor mereka: {newOpponentScore}</color>");
+
+            // Pilihan serangan musuh yang tampak di layar kita: 1 s/d 4
+            int randomEnemyAttack = Random.Range(1, 5);
+
+            // Player 2 (Musuh) memukul visual
+            if (player2Animator != null)
+            {
+                if (player2ResetCoroutine != null) StopCoroutine(player2ResetCoroutine);
+                player2Animator.SetInteger("actionType", randomEnemyAttack);
+                player2ResetCoroutine = StartCoroutine(ResetActionTypeCoroutine(player2Animator, 2));
+            }
+
+            // Player 1 (Karakter kita) dipaksa memutar animasi Terkena Hit (6)
+            if (player1Animator != null)
+            {
+                if (player1ResetCoroutine != null) StopCoroutine(player1ResetCoroutine);
+                player1Animator.SetInteger("actionType", 6); 
+                player1ResetCoroutine = StartCoroutine(ResetActionTypeCoroutine(player1Animator, 1));
+            }
+        }
+
+        // KALIBRASI 3: Berikan waktu bernapas pada klip animasi agar tidak terpotong instan
         private IEnumerator ResetActionTypeCoroutine(Animator targetAnimator, int playerIndex)
         {
-            // Gunakan jeda waktu yang sangat singkat agar game terasa responsif (cth: 0.2 detik)
-            yield return new WaitForSeconds(0.2f); 
+            // Naikkan waktu tunggu dari 0.2s ke 0.4s agar transisi gerakan selesai dengan mulus
+            yield return new WaitForSeconds(0.4f); 
             
             if (targetAnimator != null)
             {
-                targetAnimator.SetInteger("actionType", 0); 
+                targetAnimator.SetInteger("actionType", 0); // Kembali ke Idle[cite: 2]
             }
 
-            // Kosongkan referensi pelacak setelah reset berhasil diselesaikan
-            if (playerIndex == 1) player1ResetCoroutine = null;
-            if (playerIndex == 2) player2ResetCoroutine = null;
+            if (playerIndex == 1) player1ResetCoroutine = null; //[cite: 2]
+            if (playerIndex == 2) player2ResetCoroutine = null; //[cite: 2]
         }
 
         
@@ -250,5 +283,9 @@ namespace MathBoxing.Core
         {
             Application.Quit();
         }
+
+        // --- FUNGSI BARU: DIKIRIM LANGSUNG DARI JALUR PIPA SUPABASE REALTIME ---
+        
     }
+
 } //Commit 13/07/2-26
