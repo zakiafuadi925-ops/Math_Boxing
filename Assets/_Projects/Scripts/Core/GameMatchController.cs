@@ -43,6 +43,10 @@ namespace MathBoxing.Core
 
         private MathQuestion currentQuestion; 
 
+        [Header("UI Score Elements")]
+        [SerializeField] private TMPro.TextMeshProUGUI player1ScoreTextField;
+        [SerializeField] private TMPro.TextMeshProUGUI player2ScoreTextField;
+
         private void OnEnable()
         {
             if (numpadController != null) numpadController.OnAnswerSubmitted += HandleAnswerSubmitted;
@@ -130,7 +134,7 @@ namespace MathBoxing.Core
             while (timeRemaining > 0 && isGameActive)
             {
                 if (timerTextField != null) 
-                    timerTextField.text = $"Sisa Waktu: {Mathf.CeilToInt(timeRemaining)}s"; // Kalibrasi teks agar sesuai estetika barumu
+                    timerTextField.text = $"Timer: {Mathf.CeilToInt(timeRemaining)}s"; // Kalibrasi teks agar sesuai estetika barumu
                 
                 yield return new WaitForSeconds(1f);
                 timeRemaining--;
@@ -158,18 +162,16 @@ namespace MathBoxing.Core
 
         private void HandleAnswerSubmitted(int playerAnswer)
         {
-            if (!isGameActive) return; //[cite: 2]
+            if (!isGameActive) return; //
 
             if (playerAnswer == currentQuestion.correctAnswer)
             {
-                totalScore += currentQuestion.scoreValue; //[cite: 2]
+                totalScore += currentQuestion.scoreValue; //
                 Debug.Log($"<color=green>Jawaban BENAR!</color> +{currentQuestion.scoreValue} Poin. Total: {totalScore}"); //[cite: 2]
                 
-                // Pilihan serangan Player 1: 1 (Jab), 2 (Cross), 3 (Uppercut), 4 (Hook)
-                // Batas atas eksklusif, jadi tulis 5 agar angka 4 bisa keluar.
-                int randomAttack = Random.Range(1, 5); 
+                int randomAttack = Random.Range(1, 5); // Pukulan P1 (1-4)[cite: 2]
 
-                // ELEMEN AKSI: Player 1 Memukul (1-4)
+                // ELEMEN AKSI: Player 1 Memukul (1-4)[cite: 2]
                 if (player1Animator != null)
                 {
                     if (player1ResetCoroutine != null) StopCoroutine(player1ResetCoroutine); //[cite: 2]
@@ -177,12 +179,23 @@ namespace MathBoxing.Core
                     player1ResetCoroutine = StartCoroutine(ResetActionTypeCoroutine(player1Animator, 1)); //[cite: 2]
                 }
 
-                // ELEMEN REAKSI: Player 2 Terkena Hit (6 = Terkena Hit)
+                // ELEMEN REAKSI MULTIPLAYER: Player 2 (50% Peluang Block / 50% Kena Pukul)
                 if (player2Animator != null)
                 {
                     if (player2ResetCoroutine != null) StopCoroutine(player2ResetCoroutine); //[cite: 2]
-                    player2Animator.SetInteger("actionType", 6); 
-                    player2ResetCoroutine = StartCoroutine(ResetActionTypeCoroutine(player2Animator, 2)); //[cite: 2]
+                    
+                    bool isEnemyBlocking = Random.value > 0.5f; // Acak status pertahanan musuh
+                    if (isEnemyBlocking)
+                    {
+                        player2Animator.SetBool("isBlocking", true);
+                        player2ResetCoroutine = StartCoroutine(ResetBlockStatusCoroutine(player2Animator, 2));
+                        Debug.Log("<color=yellow>[Mekanik] Player 2 berhasil melakukan BLOCK!</color>");
+                    }
+                    else
+                    {
+                        player2Animator.SetInteger("actionType", 6); // Terkena Hit[cite: 2]
+                        player2ResetCoroutine = StartCoroutine(ResetActionTypeCoroutine(player2Animator, 2)); //[cite: 2]
+                    }
                 }
 
                 if (supabaseManager != null && matchmakingManager != null)
@@ -195,23 +208,32 @@ namespace MathBoxing.Core
             else
             {
                 Debug.Log("<color=red>Jawaban SALAH!</color>"); //[cite: 2]
-                
-                // Pilihan serangan musuh (Player 2) ke kita: 1 s/d 4
-                int randomEnemyAttack = Random.Range(1, 5); 
+                int randomEnemyAttack = Random.Range(1, 5); //[cite: 2]
 
-                // Player 1 Terkena Hit (6)
+                // ELEMEN REAKSI LOKAL: Player 1 (50% Peluang Block / 50% Kena Pukul)
                 if (player1Animator != null)
                 {
                     if (player1ResetCoroutine != null) StopCoroutine(player1ResetCoroutine); //[cite: 2]
-                    player1Animator.SetInteger("actionType", 6); 
-                    player1ResetCoroutine = StartCoroutine(ResetActionTypeCoroutine(player1Animator, 1)); //[cite: 2]
+                    
+                    bool isPlayer1Blocking = Random.value > 0.5f;
+                    if (isPlayer1Blocking)
+                    {
+                        player1Animator.SetBool("isBlocking", true);
+                        player1ResetCoroutine = StartCoroutine(ResetBlockStatusCoroutine(player1Animator, 1));
+                        Debug.Log("<color=yellow>[Mekanik] Kamu (Player 1) berhasil BLOCK serangan!</color>");
+                    }
+                    else
+                    {
+                        player1Animator.SetInteger("actionType", 6); // Terkena Hit[cite: 2]
+                        player1ResetCoroutine = StartCoroutine(ResetActionTypeCoroutine(player1Animator, 1)); //[cite: 2]
+                    }
                 }
                 
-                // Player 2 (Musuh) Memukul (1-4)
+                // Player 2 (Musuh) Memukul[cite: 2]
                 if (player2Animator != null)
                 {
                     if (player2ResetCoroutine != null) StopCoroutine(player2ResetCoroutine); //[cite: 2]
-                    player2Animator.SetInteger("actionType", randomEnemyAttack); 
+                    player2Animator.SetInteger("actionType", randomEnemyAttack); //[cite: 2]
                     player2ResetCoroutine = StartCoroutine(ResetActionTypeCoroutine(player2Animator, 2)); //[cite: 2]
                 }
                 
@@ -259,19 +281,75 @@ namespace MathBoxing.Core
             if (playerIndex == 2) player2ResetCoroutine = null; //[cite: 2]
         }
 
+        private IEnumerator ResetBlockStatusCoroutine(Animator targetAnimator, int playerIndex)
+        {
+            yield return new WaitForSeconds(0.3f); // Durasi menahan serangan sebelum kembali normal
+            
+            if (targetAnimator != null)
+            {
+                targetAnimator.SetBool("isBlocking", false); // Matikan pertahanan
+            }
+
+            if (playerIndex == 1) player1ResetCoroutine = null;
+            if (playerIndex == 2) player2ResetCoroutine = null;
+        }        
         
-        
+        // Panggil fungsi ini di Start() untuk menginisialisasi skor ke 0
+        private void InitializeScoreUI()
+        {
+            if (player1ScoreTextField != null) player1ScoreTextField.text = "0";
+            if (player2ScoreTextField != null) player2ScoreTextField.text = "0";
+        }
+
+        // Fungsi steril untuk memperbarui UI Skor lokal saat kamu mencetak poin
+        private void UpdateLocalScoreUI(int newScore)
+        {
+            if (player1ScoreTextField != null)
+            {
+                player1ScoreTextField.text = newScore.ToString();
+            }
+        }
+
+        // Fungsi steril untuk memperbarui UI Skor lawan saat Realtime Listener mendeteksi perubahan di database
+        public void UpdateOpponentScoreUI(int opponentScore)
+        {
+            if (player2ScoreTextField != null)
+            {
+                player2ScoreTextField.text = opponentScore.ToString();
+            }
+        }
+
         private void EndMatch()
         {
-            isGameActive = false;
+            isGameActive = false; //[cite: 2]
             
-            if (timerTextField != null) timerTextField.text = "TIME UP!";
-            if (questionTextField != null) questionTextField.text = "FINISHED";
+            if (timerTextField != null) timerTextField.text = "TIME UP!"; //[cite: 2]
+            if (questionTextField != null) questionTextField.text = "FINISHED"; //[cite: 2]
 
-            if (realtimeListener != null) realtimeListener.StopListening();
+            if (realtimeListener != null)
+            {
+                realtimeListener.StopListening(); //[cite: 2]
+                
+                // EVALUASI LOGIKA PEMENANG: Bandingkan skormu dengan skor musuh di listener
+                int finalOpponentScore = realtimeListener.opponentScore; //
+                
+                if (totalScore < finalOpponentScore)
+                {
+                    // Kamu kalah, Player 1 Knockdown!
+                    if (player1Animator != null) player1Animator.SetBool("isDead", true);
+                    Debug.Log("<color=red>[Match Over] Kamu KO!</color>");
+                }
+                else if (totalScore > finalOpponentScore)
+                {
+                    // Kamu menang, Player 2 Knockdown!
+                    if (player2Animator != null) player2Animator.SetBool("isDead", true);
+                    Debug.Log("<color=green>[Match Over] Lawan KO!</color>");
+                }
+                // Jika seri, kedua karakter dibiarkan tetap berdiri idle
+            }
 
-            if (gameOverPanel != null) gameOverPanel.SetActive(true);
-            if (finalScoreTextField != null) finalScoreTextField.text = $"FINAL SCORE: {totalScore}";
+            if (gameOverPanel != null) gameOverPanel.SetActive(true); //[cite: 2]
+            if (finalScoreTextField != null) finalScoreTextField.text = $"FINAL SCORE: {totalScore}"; //[cite: 2]
         }
 
         public void RetryGame()
