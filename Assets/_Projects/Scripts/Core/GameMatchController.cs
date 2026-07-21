@@ -169,6 +169,9 @@ namespace MathBoxing.Core
                 totalScore += currentQuestion.scoreValue; //
                 Debug.Log($"<color=green>Jawaban BENAR!</color> +{currentQuestion.scoreValue} Poin. Total: {totalScore}"); //[cite: 2]
                 
+                UpdateLocalScoreUI(totalScore);
+
+
                 int randomAttack = Random.Range(1, 5); // Pukulan P1 (1-4)[cite: 2]
 
                 // ELEMEN AKSI: Player 1 Memukul (1-4)[cite: 2]
@@ -264,6 +267,9 @@ namespace MathBoxing.Core
                 player1Animator.SetInteger("actionType", 6); 
                 player1ResetCoroutine = StartCoroutine(ResetActionTypeCoroutine(player1Animator, 1));
             }
+
+            UpdateOpponentScoreUI(newOpponentScore);
+
         }
 
         // KALIBRASI 3: Berikan waktu bernapas pada klip animasi agar tidak terpotong instan
