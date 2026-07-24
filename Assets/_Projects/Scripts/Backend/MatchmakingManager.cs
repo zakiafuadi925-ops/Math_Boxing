@@ -81,7 +81,7 @@ namespace MathBoxing.Backend
             if (isPlayer1 && !string.IsNullOrEmpty(currentMatchId))
             {
                 // PROTEKSI STERIL: Hanya hapus dari server JIKA SupabaseManager ada DAN GameObject-nya aktif!
-                if (supabaseManager != null && supabaseManager.gameObject.activeInHierarchy)
+                if (SupabaseManager != null && SupabaseManager.gameObject.activeInHierarchy)
                 {
                     StartCoroutine(DeleteRoomFromServerCoroutine(currentMatchId));
                 }
