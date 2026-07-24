@@ -9,6 +9,10 @@ namespace MathBoxing.UI
         [SerializeField] private GameObject matchmakingPanel;
         [SerializeField] private GameObject leaderboardPanel;
 
+        [Header("Game Elements To Hide On Main Menu")]
+        [SerializeField] private GameObject gameplayHUDGroup; // Tarik 'Gameplay_HUD_Group' ke sini!
+        [SerializeField] private GameObject battleArena;       // Tarik 'Battle_Arena' ke sini (opsional)!
+
         [Header("Core Reference")]
         [SerializeField] private MathBoxing.Core.GameMatchController gameMatchController;
 
@@ -23,6 +27,8 @@ namespace MathBoxing.UI
             if (mainMenuPanel != null) mainMenuPanel.SetActive(true);
             if (matchmakingPanel != null) matchmakingPanel.SetActive(false);
             if (leaderboardPanel != null) leaderboardPanel.SetActive(false);
+            if (gameplayHUDGroup != null) gameplayHUDGroup.SetActive(false);
+            if (battleArena != null) battleArena.SetActive(false);
         }
 
         
@@ -37,6 +43,10 @@ namespace MathBoxing.UI
             {
                 mainMenuPanel.SetActive(false);
             }
+
+            // 2. Munculkan kembali Arena & HUD Gameplay
+            if (battleArena != null) battleArena.SetActive(true);
+            if (gameplayHUDGroup != null) gameplayHUDGroup.SetActive(true);
 
             // 2. Pemicu utama pencarian pertandingan
             if (gameMatchController != null)
