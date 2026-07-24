@@ -25,19 +25,27 @@ namespace MathBoxing.UI
             if (leaderboardPanel != null) leaderboardPanel.SetActive(false);
         }
 
+        
+
         // Dipanggil saat pemain menekan tombol 'PLAY / START GAME'
         public void OnPlayButtonClicked()
         {
-            Debug.Log("<color=cyan>[MainMenu] Tombol PLAY ditekan! Mengalihkan ke Matchmaking...</color>");
+            Debug.Log("<color=cyan>[MainMenu] Tombol PLAY ditekan!</color>");
             
-            // Sembunyikan Main Menu
-            if (mainMenuPanel != null) mainMenuPanel.SetActive(false);
+            // 1. Sembunyikan Panel Main Menu agar tidak menimpa layar game!
+            if (mainMenuPanel != null) 
+            {
+                mainMenuPanel.SetActive(false);
+            }
 
-            // Jalankan alur pencarian game di GameMatchController
+            // 2. Pemicu utama pencarian pertandingan
             if (gameMatchController != null)
             {
-                // Mulai pencarian match
-                gameMatchController.gameObject.SetActive(true);
+                gameMatchController.StartMatchmakingFlow();
+            }
+            else
+            {
+                Debug.LogError("[MainMenu] Reference GameMatchController belum dipasang di Inspector!");
             }
         }
 

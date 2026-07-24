@@ -70,21 +70,38 @@ namespace MathBoxing.Core
         private void Start()
         {
             // Validasi pencarian komponen secara otomatis pada PC Ryzen milikmu
-            if (mathGenerator == null) 
-                mathGenerator = FindAnyObjectByType<MathGenerator>();
+            // if (mathGenerator == null) 
+            //     mathGenerator = FindAnyObjectByType<MathGenerator>();
                 
-            if (supabaseManager == null) 
-                supabaseManager = FindAnyObjectByType<MathBoxing.Backend.SupabaseManager>();
+            // if (supabaseManager == null) 
+            //     supabaseManager = FindAnyObjectByType<MathBoxing.Backend.SupabaseManager>();
                 
-            if (matchmakingManager == null) 
-                matchmakingManager = FindAnyObjectByType<MathBoxing.Backend.MatchmakingManager>(); 
+            // if (matchmakingManager == null) 
+            //     matchmakingManager = FindAnyObjectByType<MathBoxing.Backend.MatchmakingManager>(); 
                 
-            if (realtimeListener == null) 
-                realtimeListener = FindAnyObjectByType<MathBoxing.Backend.SupabaseRealtimeListener>();
+            // if (realtimeListener == null) 
+            //     realtimeListener = FindAnyObjectByType<MathBoxing.Backend.SupabaseRealtimeListener>();
             
-            if (gameOverPanel != null) 
-                gameOverPanel.SetActive(false);
+            // if (gameOverPanel != null) 
+            //     gameOverPanel.SetActive(false);
 
+            // StartCoroutine(WaitForMatchmakingCoroutine());
+
+            isGameActive = false;
+        }
+
+        // Dipanggil oleh MainMenuController saat tombol PLAY ditekan!
+        public void StartMatchmakingFlow()
+        {
+            Debug.Log("<color=cyan>[Controller] Menerima sinyal PLAY dari Main Menu. Memulai matchmaking...</color>");
+            
+            // Tampilkan panel matchmaking jika ada
+            if (matchmakingPanel != null) 
+            {
+                matchmakingPanel.SetActive(true);
+            }
+
+            // Mulai proses pencarian lawan secara steril
             StartCoroutine(WaitForMatchmakingCoroutine());
         }
 
