@@ -36,6 +36,16 @@ namespace MathBoxing.Backend
             // Dijamin berjalan paling awal sebelum GameMatchController memanggil FindMatch!
             myPlayerId = System.Guid.NewGuid().ToString();
             Debug.Log($"[Matchmaking] Player ID dikalibrasi ke UUID Steril via Awake: {myPlayerId}");
+
+            // CEK PERSYARATAN: Hanya jalankan jika SupabaseManager TIDAK NULL DAN GAMEOBJECT-NYA AKTIF!
+            if (SupabaseManager != null && SupabaseManager.gameObject.activeInHierarchy)
+            {
+                StartCoroutine(CancelMatchmaking());
+            }
+            else
+            {
+                Debug.LogWarning("<color=yellow>[Matchmaking] SupabaseManager non-aktif. Mengabaikan pembatalan HTTP request.</color>");
+            }
         }
 
         public void FindMatch()
@@ -60,15 +70,25 @@ namespace MathBoxing.Backend
             Debug.Log("<color=red>[Matchmaking] Player membatalkan pencarian lawan secara manual!</color>");
             
             // 1. Hentikan coroutine pembuatan kamar jika masih berjalan
-            if (createRoomCoroutineInstance != null) StopCoroutine(createRoomCoroutineInstance);
+            if (createRoomCoroutineInstance != null) 
+                StopCoroutine(createRoomCoroutineInstance);
             
             // 2. Matikan pendengar realtime agar tidak bocor memori
-            if (realtimeListener != null) realtimeListener.StopListening();
+            if (realtimeListener != null) 
+                realtimeListener.StopListening();
 
-            // 3. Jika kita adalah Host (P1) dan kamar sudah telanjur dibuat, HAPUS dari Supabase!
+            // 3. Jika kita adalah Host (P1) dan kamar sudah telanjur dibuat:
             if (isPlayer1 && !string.IsNullOrEmpty(currentMatchId))
             {
-                StartCoroutine(DeleteRoomFromServerCoroutine(currentMatchId));
+                // PROTEKSI STERIL: Hanya hapus dari server JIKA SupabaseManager ada DAN GameObject-nya aktif!
+                if (supabaseManager != null && supabaseManager.gameObject.activeInHierarchy)
+                {
+                    StartCoroutine(DeleteRoomFromServerCoroutine(currentMatchId));
+                }
+                else
+                {
+                    Debug.LogWarning("<color=yellow>[Matchmaking] SupabaseManager non-aktif. Mengabaikan penghapusan kamar dari server.</color>");
+                }
             }
 
             // 4. Reset status internal
