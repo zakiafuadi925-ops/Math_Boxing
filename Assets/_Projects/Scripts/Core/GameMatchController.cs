@@ -47,6 +47,12 @@ namespace MathBoxing.Core
         [SerializeField] private TMPro.TextMeshProUGUI player1ScoreTextField;
         [SerializeField] private TMPro.TextMeshProUGUI player2ScoreTextField;
 
+        [Header("UI Panels")]
+        [SerializeField] private GameObject numpadPanel;
+        
+        [Header("Input Panel")]
+        [SerializeField] private GameObject inputPanel;
+
         private void OnEnable()
         {
             if (numpadController != null) numpadController.OnAnswerSubmitted += HandleAnswerSubmitted;
@@ -117,7 +123,8 @@ namespace MathBoxing.Core
         }
 
         private void StartMatch()
-        {
+        {   
+            InitializeScoreUI();
             if (player1Animator != null) player1Animator.speed = 1f;
             if (player2Animator != null) player2Animator.speed = 1f;
             Debug.Log("<color=cyan>[Controller] Memulai inisiasi ring pertarungan matematika!</color>");
@@ -303,8 +310,8 @@ namespace MathBoxing.Core
         // Panggil fungsi ini di Start() untuk menginisialisasi skor ke 0
         private void InitializeScoreUI()
         {
-            if (player1ScoreTextField != null) player1ScoreTextField.text = "0";
-            if (player2ScoreTextField != null) player2ScoreTextField.text = "0";
+            if (player1ScoreTextField != null) player1ScoreTextField.text = "PLAYER_1 SCORE:0";
+            if (player2ScoreTextField != null) player2ScoreTextField.text = "PLAYER_2 SCORE: 0";
         }
 
         // Fungsi steril untuk memperbarui UI Skor lokal saat kamu mencetak poin
@@ -312,7 +319,7 @@ namespace MathBoxing.Core
         {
             if (player1ScoreTextField != null)
             {
-                player1ScoreTextField.text = newScore.ToString();
+                player1ScoreTextField.text = $"PLAYER_1 SCORE: {newScore}";
             }
         }
 
@@ -321,13 +328,16 @@ namespace MathBoxing.Core
         {
             if (player2ScoreTextField != null)
             {
-                player2ScoreTextField.text = opponentScore.ToString();
+                player2ScoreTextField.text = $"PLAYER_2 SCORE: {opponentScore}";
             }
         }
 
         private void EndMatch()
         {
             isGameActive = false; //[cite: 2]
+
+            if (player1ResetCoroutine != null) StopCoroutine(player1ResetCoroutine);
+            if (player2ResetCoroutine != null) StopCoroutine(player2ResetCoroutine);
             
             if (timerTextField != null) timerTextField.text = "TIME UP!"; //[cite: 2]
             if (questionTextField != null) questionTextField.text = "FINISHED"; //[cite: 2]
@@ -356,6 +366,16 @@ namespace MathBoxing.Core
 
             if (gameOverPanel != null) gameOverPanel.SetActive(true); //[cite: 2]
             if (finalScoreTextField != null) finalScoreTextField.text = $"FINAL SCORE: {totalScore}"; //[cite: 2]
+
+            if (numpadPanel != null)
+            {
+                numpadPanel.SetActive(false); // Sekarang ini valid karena numpadPanel adalah GameObject!
+            }
+
+            if (inputPanel != null)
+            {
+                inputPanel.SetActive(false);
+            }
         }
 
         public void RetryGame()
