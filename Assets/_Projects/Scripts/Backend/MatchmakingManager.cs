@@ -8,9 +8,7 @@ namespace MathBoxing.Backend
 {
     public class MatchmakingManager : MonoBehaviour
     {
-        [Header("Configuration Asset")]
-        [SerializeField] private SupabaseConfig config;
-        [SerializeField] private SupabaseRealtimeListener realtimeListener; 
+        
 
         [Header("Testing Rules (Untuk 2 Player)")]
         public bool forceAsPlayer1 = true;    // CENTANG INI UNTUK JADI HOST (P1)
@@ -31,16 +29,27 @@ namespace MathBoxing.Backend
 
         private const string SavedMatchIdKey = "TEMP_SIMULATED_MATCH_ID";
 
+        [Header("Configuration Asset")]
+        [SerializeField] private SupabaseConfig config;
+        [SerializeField] private SupabaseRealtimeListener realtimeListener; 
+        [SerializeField] private SupabaseManager supabaseManager; // <--- TAMBAHKAN BARIS INI!
+
         private void Awake()
         {
             // Dijamin berjalan paling awal sebelum GameMatchController memanggil FindMatch!
             myPlayerId = System.Guid.NewGuid().ToString();
             Debug.Log($"[Matchmaking] Player ID dikalibrasi ke UUID Steril via Awake: {myPlayerId}");
 
-            // CEK PERSYARATAN: Hanya jalankan jika SupabaseManager TIDAK NULL DAN GAMEOBJECT-NYA AKTIF!
-            if (SupabaseManager != null && SupabaseManager.gameObject.activeInHierarchy)
+            // Auto-search SupabaseManager jika slot Inspector lupa diisi
+            if (supabaseManager == null)
             {
-                StartCoroutine(CancelMatchmaking());
+                supabaseManager = FindAnyObjectByType<SupabaseManager>();
+            }
+
+            // CEK PERSYARATAN: Hanya jalankan jika SupabaseManager TIDAK NULL DAN GAMEOBJECT-NYA AKTIF!
+            if (supabaseManager != null && supabaseManager.gameObject.activeInHierarchy)
+            {
+                CancelMatchmaking();
             }
             else
             {
@@ -81,7 +90,7 @@ namespace MathBoxing.Backend
             if (isPlayer1 && !string.IsNullOrEmpty(currentMatchId))
             {
                 // PROTEKSI STERIL: Hanya hapus dari server JIKA SupabaseManager ada DAN GameObject-nya aktif!
-                if (SupabaseManager != null && SupabaseManager.gameObject.activeInHierarchy)
+                if (supabaseManager != null && supabaseManager.gameObject.activeInHierarchy)
                 {
                     StartCoroutine(DeleteRoomFromServerCoroutine(currentMatchId));
                 }

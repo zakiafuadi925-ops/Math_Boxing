@@ -396,31 +396,25 @@ namespace MathBoxing.Core
         // 2. Tombol EXIT: Kembali ke Main Menu Panel
         public void ExitToMainMenu()
         {
-            Time.timeScale = 1f; // Pastikan timeScale normal
-            
-            // Stop Realtime Listener
+            Time.timeScale = 1f; // Pastikan waktu Unity berjalan normal
+
+            // 1. Matikan listener Supabase agar tidak ada data hantu
             if (realtimeListener != null)
             {
                 realtimeListener.StopListening();
             }
 
-            // Sembunyikan Game Over Panel
-            if (gameOverPanel != null) gameOverPanel.SetActive(false);
+            // 2. Sembunyikan panel Game Over
+            if (gameOverPanel != null) 
+            {
+                gameOverPanel.SetActive(false);
+            }
 
-            // Jika kamu punya Main_Menu_Panel di scene yang sama:
-            if (matchmakingPanel != null)
-            {
-                // Aktifkan panel utama / matchmaking kembali
-                matchmakingPanel.SetActive(true);
-            }
-            else
-            {
-                // Jika Main Menu ada di Scene terpisah (misal Scene index 0):
-                // SceneManager.LoadScene("MainMenuScene");
-                
-                // Atau jika hanya me-reload scene saat ini:
-                SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
-            }
+            // 3. Reload Scene untuk me-reset seluruh variabel/state game secara steril,
+            // yang secara otomatis akan memicu MainMenuController menunjukkan Main Menu di Awake/Start!
+            UnityEngine.SceneManagement.SceneManager.LoadScene(
+                UnityEngine.SceneManagement.SceneManager.GetActiveScene().buildIndex
+            );
         }
 
         // 3. Tombol LEADERBOARD: Buka Pop-up Leaderboard
