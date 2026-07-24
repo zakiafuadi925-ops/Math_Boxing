@@ -124,6 +124,7 @@ namespace MathBoxing.Core
 
         private void StartMatch()
         {   
+            Time.timeScale = 1f; // Pastikan skala waktu normal (1) saat ring dibuka!
             InitializeScoreUI();
             if (player1Animator != null) player1Animator.speed = 1f;
             if (player2Animator != null) player2Animator.speed = 1f;
@@ -380,7 +381,54 @@ namespace MathBoxing.Core
 
         public void RetryGame()
         {
+            // Paksa waktu Unity berjalan normal kembali sebelum me-reload scene!
+            Time.timeScale = 1f;
+
+            // Hentikan listener Supabase agar tidak ada data hantu dari match lama
+            if (realtimeListener != null)
+            {
+                realtimeListener.StopListening();
+            }
+
             SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+        }
+
+        // 2. Tombol EXIT: Kembali ke Main Menu Panel
+        public void ExitToMainMenu()
+        {
+            Time.timeScale = 1f; // Pastikan timeScale normal
+            
+            // Stop Realtime Listener
+            if (realtimeListener != null)
+            {
+                realtimeListener.StopListening();
+            }
+
+            // Sembunyikan Game Over Panel
+            if (gameOverPanel != null) gameOverPanel.SetActive(false);
+
+            // Jika kamu punya Main_Menu_Panel di scene yang sama:
+            if (matchmakingPanel != null)
+            {
+                // Aktifkan panel utama / matchmaking kembali
+                matchmakingPanel.SetActive(true);
+            }
+            else
+            {
+                // Jika Main Menu ada di Scene terpisah (misal Scene index 0):
+                // SceneManager.LoadScene("MainMenuScene");
+                
+                // Atau jika hanya me-reload scene saat ini:
+                SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+            }
+        }
+
+        // 3. Tombol LEADERBOARD: Buka Pop-up Leaderboard
+        public void OpenLeaderboard()
+        {
+            Debug.Log("<color=yellow>[UI] Membuka Panel Leaderboard...</color>");
+            // TODO: Aktifkan GameObject Leaderboard_Panel jika sudah ada UI-nya
+            // if (leaderboardPanel != null) leaderboardPanel.SetActive(true);
         }
 
         public void QuitGame()
