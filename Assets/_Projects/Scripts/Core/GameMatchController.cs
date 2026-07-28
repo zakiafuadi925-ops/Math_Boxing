@@ -59,6 +59,9 @@ namespace MathBoxing.Core
         [Header("Lobby Panel Reference")]
         [SerializeField] private MathBoxing.UI.LobbyPanelController lobbyPanelController;
 
+        [Header("Main Menu Reference")]
+        [SerializeField] private GameObject mainMenuPanel;
+
         private void OnEnable()
         {
             if (numpadController != null) numpadController.OnAnswerSubmitted += HandleAnswerSubmitted;
