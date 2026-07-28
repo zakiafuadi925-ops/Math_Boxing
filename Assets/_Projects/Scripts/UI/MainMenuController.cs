@@ -18,6 +18,11 @@ namespace MathBoxing.UI
 
         private void Start()
         {
+            if (AudioManager.Instance != null)
+            {
+                AudioManager.Instance.PlayBGM(AudioManager.Instance.sfxButtonEnter); // Opsional: atur jika ada BGM khusus
+                AudioManager.Instance.PlayBGM(AudioManager.Instance.bgmMenu);
+            }
             // Tampilkan Main Menu di awal aplikasi dibuka
             ShowMainMenu();
         }
@@ -37,6 +42,12 @@ namespace MathBoxing.UI
         public void OnPlayButtonClicked()
         {
             Debug.Log("<color=cyan>[MainMenu] Tombol PLAY ditekan!</color>");
+
+            // SFX Klik Tombol
+            if (AudioManager.Instance != null)
+            {
+                AudioManager.Instance.PlaySFX(AudioManager.Instance.sfxButtonEnter);
+            }
             
             // 1. Sembunyikan Panel Main Menu agar tidak menimpa layar game!
             if (mainMenuPanel != null) 
@@ -72,6 +83,11 @@ namespace MathBoxing.UI
 
         public void OnQuitButtonClicked()
         {
+            if (AudioManager.Instance != null)
+            {
+                AudioManager.Instance.PlaySFX(AudioManager.Instance.sfxButtonClick);
+            }
+            
             Application.Quit();
         }
     }

@@ -56,6 +56,9 @@ namespace MathBoxing.Core
         [Header("Matchmaking Settings")]
         [SerializeField] private float matchmakingTimeout = 10f; // Batas waktu pencarian lawan (detik)
 
+        [Header("Lobby Panel Reference")]
+        [SerializeField] private MathBoxing.UI.LobbyPanelController lobbyPanelController;
+
         private void OnEnable()
         {
             if (numpadController != null) numpadController.OnAnswerSubmitted += HandleAnswerSubmitted;
@@ -93,6 +96,75 @@ namespace MathBoxing.Core
             isGameActive = false;
         }
 
+        // private IEnumerator WaitForMatchmakingCoroutine()
+        // {
+        //     if (matchmakingManager != null)
+        //     {
+        //         matchmakingManager.FindMatch();
+                
+        //         if (matchmakingManager.forceAsPlayer1)
+        //         {
+        //             StartCoroutine(matchmakingManager.StartTimeoutCountdown());
+        //         }
+                
+        //         // Nyalakan panel pencarian di awal
+        //         if (matchmakingPanel != null) matchmakingPanel.SetActive(true);
+
+        //         float searchTimer = matchmakingTimeout;
+
+        //         // Loop pencarian lawan selama durasi timer belum habis dan match belum ready
+        //         while (!matchmakingManager.isMatchReady && searchTimer > 0)
+        //         {
+        //             if (string.IsNullOrEmpty(matchmakingManager.currentMatchId))
+        //             {
+        //                 if (matchmakingPanel != null) matchmakingPanel.SetActive(false);
+        //                 yield break; 
+        //             }
+
+        //             // Update teks status beserta sisa detik timer matchmaking
+        //             if (questionTextField != null) 
+        //             {
+        //                 questionTextField.text = $"Mencari Lawan... ({Mathf.CeilToInt(searchTimer)}s)";
+        //             }
+
+        //             // Bunyikan SFX tick pelan tiap detik untuk feedback audio
+        //             if (AudioManager.Instance != null)
+        //             {
+        //                 AudioManager.Instance.PlaySFX(AudioManager.Instance.sfxTimerTick);
+        //             }
+
+        //             yield return new WaitForSeconds(1f);
+        //             searchTimer--;
+        //         }
+
+        //         // Jika waktu habis tetapi lawan TIDAK ditemukan
+        //         if (!matchmakingManager.isMatchReady)
+        //         {
+        //             Debug.LogWarning("<color=yellow>[Controller] Matchmaking Timeout! Lawan tidak ditemukan.</color>");
+                    
+        //             if (questionTextField != null) 
+        //             {
+        //                 questionTextField.text = "Lawan tidak ditemukan!";
+        //             }
+
+        //             yield return new WaitForSeconds(1.5f); // Beri jeda sebentar agar teks terbaca
+
+        //             if (matchmakingPanel != null) matchmakingPanel.SetActive(false);
+                    
+        //             // Kembalikan ke Main Menu atau batalkan proses
+        //             ExitToMainMenu(); 
+        //             yield break;
+        //         }
+
+        //         // Jika berhasil mendapatkan lawan sebelum timer habis
+        //         Debug.Log("<color=green>[Controller] Pertandingan ready! Menutup panel matchmaking...</color>");
+                
+        //         if (matchmakingPanel != null) matchmakingPanel.SetActive(false);
+
+        //         StartMatch(); 
+        //     }
+        // }
+
         private IEnumerator WaitForMatchmakingCoroutine()
         {
             if (matchmakingManager != null)
@@ -104,27 +176,28 @@ namespace MathBoxing.Core
                     StartCoroutine(matchmakingManager.StartTimeoutCountdown());
                 }
                 
-                // Nyalakan panel pencarian di awal
-                if (matchmakingPanel != null) matchmakingPanel.SetActive(true);
+                // Tampilkan Lobby Panel
+                if (lobbyPanelController != null) 
+                {
+                    lobbyPanelController.ShowLobby();
+                }
 
                 float searchTimer = matchmakingTimeout;
 
-                // Loop pencarian lawan selama durasi timer belum habis dan match belum ready
                 while (!matchmakingManager.isMatchReady && searchTimer > 0)
                 {
                     if (string.IsNullOrEmpty(matchmakingManager.currentMatchId))
                     {
-                        if (matchmakingPanel != null) matchmakingPanel.SetActive(false);
+                        if (lobbyPanelController != null) lobbyPanelController.HideLobby();
                         yield break; 
                     }
 
-                    // Update teks status beserta sisa detik timer matchmaking
-                    if (questionTextField != null) 
+                    // Update UI Timer di Lobby Panel
+                    if (lobbyPanelController != null)
                     {
-                        questionTextField.text = $"Mencari Lawan... ({Mathf.CeilToInt(searchTimer)}s)";
+                        lobbyPanelController.UpdateMatchmakingTimer(Mathf.CeilToInt(searchTimer));
                     }
 
-                    // Bunyikan SFX tick pelan tiap detik untuk feedback audio
                     if (AudioManager.Instance != null)
                     {
                         AudioManager.Instance.PlaySFX(AudioManager.Instance.sfxTimerTick);
@@ -134,29 +207,25 @@ namespace MathBoxing.Core
                     searchTimer--;
                 }
 
-                // Jika waktu habis tetapi lawan TIDAK ditemukan
+                // Jika Lawan TIDAK Ditemukan
                 if (!matchmakingManager.isMatchReady)
                 {
-                    Debug.LogWarning("<color=yellow>[Controller] Matchmaking Timeout! Lawan tidak ditemukan.</color>");
+                    Debug.LogWarning("<color=yellow>[Controller] Matchmaking Timeout!</color>");
+                    if (lobbyPanelController != null) lobbyPanelController.HideLobby();
                     
-                    if (questionTextField != null) 
-                    {
-                        questionTextField.text = "Lawan tidak ditemukan!";
-                    }
-
-                    yield return new WaitForSeconds(1.5f); // Beri jeda sebentar agar teks terbaca
-
-                    if (matchmakingPanel != null) matchmakingPanel.SetActive(false);
-                    
-                    // Kembalikan ke Main Menu atau batalkan proses
                     ExitToMainMenu(); 
                     yield break;
                 }
 
-                // Jika berhasil mendapatkan lawan sebelum timer habis
-                Debug.Log("<color=green>[Controller] Pertandingan ready! Menutup panel matchmaking...</color>");
-                
-                if (matchmakingPanel != null) matchmakingPanel.SetActive(false);
+                // Jika Lawan Ditemukan!
+                if (lobbyPanelController != null)
+                {
+                    lobbyPanelController.OnOpponentFound("Player 2 (Online)");
+                }
+
+                yield return new WaitForSeconds(1.5f); // Beri jeda 1.5 detik agar pemain melihat lawan masuk ke lobby
+
+                if (lobbyPanelController != null) lobbyPanelController.HideLobby();
 
                 StartMatch(); 
             }
