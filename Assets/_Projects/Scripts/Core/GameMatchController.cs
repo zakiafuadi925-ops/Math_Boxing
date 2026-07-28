@@ -53,6 +53,9 @@ namespace MathBoxing.Core
         [Header("Input Panel")]
         [SerializeField] private GameObject inputPanel;
 
+        [Header("Matchmaking Settings")]
+        [SerializeField] private float matchmakingTimeout = 10f; // Batas waktu pencarian lawan (detik)
+
         private void OnEnable()
         {
             if (numpadController != null) numpadController.OnAnswerSubmitted += HandleAnswerSubmitted;
@@ -88,6 +91,75 @@ namespace MathBoxing.Core
             // StartCoroutine(WaitForMatchmakingCoroutine());
 
             isGameActive = false;
+        }
+
+        private IEnumerator WaitForMatchmakingCoroutine()
+        {
+            if (matchmakingManager != null)
+            {
+                matchmakingManager.FindMatch();
+                
+                if (matchmakingManager.forceAsPlayer1)
+                {
+                    StartCoroutine(matchmakingManager.StartTimeoutCountdown());
+                }
+                
+                // Nyalakan panel pencarian di awal
+                if (matchmakingPanel != null) matchmakingPanel.SetActive(true);
+
+                float searchTimer = matchmakingTimeout;
+
+                // Loop pencarian lawan selama durasi timer belum habis dan match belum ready
+                while (!matchmakingManager.isMatchReady && searchTimer > 0)
+                {
+                    if (string.IsNullOrEmpty(matchmakingManager.currentMatchId))
+                    {
+                        if (matchmakingPanel != null) matchmakingPanel.SetActive(false);
+                        yield break; 
+                    }
+
+                    // Update teks status beserta sisa detik timer matchmaking
+                    if (questionTextField != null) 
+                    {
+                        questionTextField.text = $"Mencari Lawan... ({Mathf.CeilToInt(searchTimer)}s)";
+                    }
+
+                    // Bunyikan SFX tick pelan tiap detik untuk feedback audio
+                    if (AudioManager.Instance != null)
+                    {
+                        AudioManager.Instance.PlaySFX(AudioManager.Instance.sfxTimerTick);
+                    }
+
+                    yield return new WaitForSeconds(1f);
+                    searchTimer--;
+                }
+
+                // Jika waktu habis tetapi lawan TIDAK ditemukan
+                if (!matchmakingManager.isMatchReady)
+                {
+                    Debug.LogWarning("<color=yellow>[Controller] Matchmaking Timeout! Lawan tidak ditemukan.</color>");
+                    
+                    if (questionTextField != null) 
+                    {
+                        questionTextField.text = "Lawan tidak ditemukan!";
+                    }
+
+                    yield return new WaitForSeconds(1.5f); // Beri jeda sebentar agar teks terbaca
+
+                    if (matchmakingPanel != null) matchmakingPanel.SetActive(false);
+                    
+                    // Kembalikan ke Main Menu atau batalkan proses
+                    ExitToMainMenu(); 
+                    yield break;
+                }
+
+                // Jika berhasil mendapatkan lawan sebelum timer habis
+                Debug.Log("<color=green>[Controller] Pertandingan ready! Menutup panel matchmaking...</color>");
+                
+                if (matchmakingPanel != null) matchmakingPanel.SetActive(false);
+
+                StartMatch(); 
+            }
         }
 
         // Dipanggil oleh MainMenuController saat tombol PLAY ditekan!
@@ -167,6 +239,15 @@ namespace MathBoxing.Core
             {
                 if (timerTextField != null) 
                     timerTextField.text = $"Timer: {Mathf.CeilToInt(timeRemaining)}s"; // Kalibrasi teks agar sesuai estetika barumu
+
+                // === PEMICU EFEK SUARA TIMER TICK (10 DETIK TERAKHIR) ===
+                if (timeRemaining <= 10f && timeRemaining > 0)
+                {
+                    if (AudioManager.Instance != null)
+                    {
+                        AudioManager.Instance.PlaySFX(AudioManager.Instance.sfxTimerTick);
+                    }
+                }
                 
                 yield return new WaitForSeconds(1f);
                 timeRemaining--;
@@ -230,12 +311,24 @@ namespace MathBoxing.Core
                     {
                         player2Animator.SetBool("isBlocking", true);
                         player2ResetCoroutine = StartCoroutine(ResetBlockStatusCoroutine(player2Animator, 2));
+
+                        // === SFX TANGKISAN / MISS ===
+                        if (AudioManager.Instance != null)
+                        {
+                            AudioManager.Instance.PlaySFX(AudioManager.Instance.sfxPunchMiss);
+                        }
                         Debug.Log("<color=yellow>[Mekanik] Player 2 berhasil melakukan BLOCK!</color>");
                     }
                     else
                     {
                         player2Animator.SetInteger("actionType", 6); // Terkena Hit[cite: 2]
                         player2ResetCoroutine = StartCoroutine(ResetActionTypeCoroutine(player2Animator, 2)); //[cite: 2]
+
+                        // === SFX PUKULAN KENA (HIT) ===
+                        if (AudioManager.Instance != null)
+                        {
+                            AudioManager.Instance.PlaySFX(AudioManager.Instance.sfxPunchHit);
+                        }
                     }
                 }
 
@@ -267,12 +360,24 @@ namespace MathBoxing.Core
                     {
                         player1Animator.SetBool("isBlocking", true);
                         player1ResetCoroutine = StartCoroutine(ResetBlockStatusCoroutine(player1Animator, 1));
+
+                        // === SFX PLAYER 1 NANGKIS ===
+                        if (AudioManager.Instance != null)
+                        {
+                            AudioManager.Instance.PlaySFX(AudioManager.Instance.sfxPunchMiss);
+                        }
                         Debug.Log("<color=yellow>[Mekanik] Kamu (Player 1) berhasil BLOCK serangan!</color>");
                     }
                     else
                     {
                         player1Animator.SetInteger("actionType", 6); // Terkena Hit[cite: 2]
                         player1ResetCoroutine = StartCoroutine(ResetActionTypeCoroutine(player1Animator, 1)); //[cite: 2]
+
+                        // === SFX PLAYER 1 KENA PUKUL ===
+                        if (AudioManager.Instance != null)
+                        {
+                            AudioManager.Instance.PlaySFX(AudioManager.Instance.sfxPunchHit);
+                        }
                     }
                 }
                 
@@ -372,6 +477,13 @@ namespace MathBoxing.Core
         private void EndMatch()
         {
             isGameActive = false; //[cite: 2]
+
+            if (AudioManager.Instance != null)
+            {
+                AudioManager.Instance.StopBGM(); // Hentikan BGM Bertarung
+                AudioManager.Instance.PlaySFX(AudioManager.Instance.sfxRoundBell);
+                AudioManager.Instance.PlaySFX(AudioManager.Instance.bgmVictory); // Atau panggil jingle Game Over/Victory
+            }
 
             if (player1ResetCoroutine != null) StopCoroutine(player1ResetCoroutine);
             if (player2ResetCoroutine != null) StopCoroutine(player2ResetCoroutine);
