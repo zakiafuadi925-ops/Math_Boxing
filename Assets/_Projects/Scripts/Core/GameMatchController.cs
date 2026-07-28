@@ -141,6 +141,12 @@ namespace MathBoxing.Core
 
         private void StartMatch()
         {   
+            if (AudioManager.Instance != null)
+            {
+                AudioManager.Instance.PlaySFX(AudioManager.Instance.sfxRoundBell);
+                AudioManager.Instance.PlayBGM(AudioManager.Instance.bgmGameplay); // Putar Musik Bertarung
+            }
+
             Time.timeScale = 1f; // Pastikan skala waktu normal (1) saat ring dibuka!
             InitializeScoreUI();
             if (player1Animator != null) player1Animator.speed = 1f;
@@ -192,6 +198,12 @@ namespace MathBoxing.Core
             if (playerAnswer == currentQuestion.correctAnswer)
             {
                 totalScore += currentQuestion.scoreValue; //
+
+                if (AudioManager.Instance != null)
+                {
+                    AudioManager.Instance.PlaySFX(AudioManager.Instance.sfxCorrectAnswer);
+                }
+
                 Debug.Log($"<color=green>Jawaban BENAR!</color> +{currentQuestion.scoreValue} Poin. Total: {totalScore}"); //[cite: 2]
                 
                 UpdateLocalScoreUI(totalScore);
@@ -236,6 +248,12 @@ namespace MathBoxing.Core
             else
             {
                 Debug.Log("<color=red>Jawaban SALAH!</color>"); //[cite: 2]
+
+                if (numpadController != null) 
+                {
+                    numpadController.TriggerWrongAnswerPenalty();
+                }
+
                 int randomEnemyAttack = Random.Range(1, 5); //[cite: 2]
 
                 // ELEMEN REAKSI LOKAL: Player 1 (50% Peluang Block / 50% Kena Pukul)
