@@ -177,39 +177,7 @@ namespace MathBoxing.Core
             StartCoroutine(WaitForMatchmakingCoroutine());
         }
 
-        private IEnumerator WaitForMatchmakingCoroutine()
-        {
-            if (matchmakingManager != null)
-            {
-                matchmakingManager.FindMatch();
-                
-                if (matchmakingManager.forceAsPlayer1)
-                {
-                    StartCoroutine(matchmakingManager.StartTimeoutCountdown());
-                }
-                
-                // Nyalakan panel pencarian di awal fase steril
-                if (matchmakingPanel != null) matchmakingPanel.SetActive(true);
-                if (questionTextField != null) questionTextField.text = "Mencari Lawan...";
-
-                while (!matchmakingManager.isMatchReady)
-                {
-                    if (string.IsNullOrEmpty(matchmakingManager.currentMatchId))
-                    {
-                        if (matchmakingPanel != null) matchmakingPanel.SetActive(false);
-                        yield break; 
-                    }
-                    yield return null;
-                }
-
-                Debug.Log("<color=green>[Controller] Pertandingan ready! Menutup panel matchmaking...</color>");
-                
-                // Matikan panel matchmaking karena pertandingan segera dimulai
-                if (matchmakingPanel != null) matchmakingPanel.SetActive(false);
-
-                StartMatch(); 
-            }
-        }
+        
 
         private void StartMatch()
         {   
