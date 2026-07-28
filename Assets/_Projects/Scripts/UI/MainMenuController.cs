@@ -1,4 +1,5 @@
 using UnityEngine;
+using MathBoxing.Core;
 
 namespace MathBoxing.UI
 {
@@ -70,6 +71,31 @@ namespace MathBoxing.UI
             }
         }
 
+        public void OnLobbyButtonClicked()
+        {
+            // 1. Play SFX Klik
+            if (AudioManager.Instance != null)
+            {
+                AudioManager.Instance.PlaySFX(AudioManager.Instance.sfxButtonEnter);
+            }
+
+            // 2. Sembunyikan Panel Main Menu agar layar bersih saat Lobby terbuka
+            if (mainMenuPanel != null)
+            {
+                mainMenuPanel.SetActive(false);
+            }
+
+            // 3. Panggil Alur Matchmaking & Lobby di GameMatchController!
+            if (gameMatchController != null)
+            {
+                gameMatchController.StartMatchmakingFlow();
+            }
+            else
+            {
+                Debug.LogError("[MainMenuController] Referensi GameMatchController belum dipasang di Inspector!");
+            }
+        }
+
         public void OnLeaderboardButtonClicked()
         {
             Debug.Log("<color=yellow>[MainMenu] Membuka Leaderboard...</color>");
@@ -87,7 +113,7 @@ namespace MathBoxing.UI
             {
                 AudioManager.Instance.PlaySFX(AudioManager.Instance.sfxButtonClick);
             }
-            
+
             Application.Quit();
         }
     }

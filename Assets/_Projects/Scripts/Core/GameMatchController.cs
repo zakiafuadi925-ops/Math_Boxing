@@ -595,6 +595,16 @@ namespace MathBoxing.Core
                 gameOverPanel.SetActive(false);
             }
 
+            if (lobbyPanelController != null) 
+            {
+                lobbyPanelController.HideLobby();
+            }
+
+            if (mainMenuPanel != null) 
+            {
+                mainMenuPanel.SetActive(true);
+            }
+
             // 3. Reload Scene untuk me-reset seluruh variabel/state game secara steril,
             // yang secara otomatis akan memicu MainMenuController menunjukkan Main Menu di Awake/Start!
             UnityEngine.SceneManagement.SceneManager.LoadScene(
