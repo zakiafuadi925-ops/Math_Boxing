@@ -49,7 +49,7 @@ namespace MathBoxing.Backend
             // CEK PERSYARATAN: Hanya jalankan jika SupabaseManager TIDAK NULL DAN GAMEOBJECT-NYA AKTIF!
             if (supabaseManager != null && supabaseManager.gameObject.activeInHierarchy)
             {
-                CancelMatchmaking();
+                // CancelMatchmaking();
             }
             else
             {
