@@ -24,7 +24,7 @@ namespace MathBoxing.UI
 
         private void Start()
         {
-            // Validasi komponen dasar agar tidak menghasilkan NullReferenceException yang memalukan
+            // Validasi komponen dasar agar tidak menghasilkan NullReferenceException
             if (numpadCanvasGroup == null)
             {
                 numpadCanvasGroup = GetComponent<CanvasGroup>();
@@ -47,6 +47,12 @@ namespace MathBoxing.UI
         /// </summary>
         public void PressNumberButton(string number)
         {
+            // SFX Klik Angka
+            if (AudioManager.Instance != null)
+            {
+                AudioManager.Instance.PlaySFX(AudioManager.Instance.sfxButtonClick);
+            }
+
             if (isLocked) return;
 
             // Cegah input angka nol berlebih di depan (e.g., "0005" menjadi "5")
@@ -76,6 +82,12 @@ namespace MathBoxing.UI
         /// </summary>
         public void PressMinusButton()
         {
+            // SFX Klik Angka / Tombol
+            if (AudioManager.Instance != null)
+            {
+                AudioManager.Instance.PlaySFX(AudioManager.Instance.sfxButtonClick);
+            }
+
             if (isLocked) return;
 
             // Logika toggle: Jika kosong, pasang "-". Jika sudah ada "-", hapus "-".
@@ -96,6 +108,12 @@ namespace MathBoxing.UI
         /// </summary>
         public void PressClearButton()
         {
+            // SFX Clear Button
+            if (AudioManager.Instance != null)
+            {
+                AudioManager.Instance.PlaySFX(AudioManager.Instance.sfxButtonClear);
+            }
+            
             if (isLocked) return;
             ResetInput();
         }
@@ -105,6 +123,12 @@ namespace MathBoxing.UI
         /// </summary>
         public void PressEnterButton()
         {
+            // SFX Enter Button
+            if (AudioManager.Instance != null)
+            {
+                AudioManager.Instance.PlaySFX(AudioManager.Instance.sfxButtonEnter);
+            }
+
             // Validasi ketat: Jangan kirim jika terkunci, kosong, atau hanya berisi minus
             if (isLocked || string.IsNullOrEmpty(currentInputString) || currentInputString == "-") return;
 
@@ -126,6 +150,12 @@ namespace MathBoxing.UI
         /// </summary>
         public void TriggerWrongAnswerPenalty()
         {
+            // Bunyikan Suara Jawaban Salah / Penalti
+            if (AudioManager.Instance != null)
+            {
+                AudioManager.Instance.PlaySFX(AudioManager.Instance.sfxWrongAnswer);
+            }
+
             if (gameObject.activeInHierarchy)
             {
                 StartCoroutine(PenaltyCooldownCoroutine());
@@ -179,7 +209,6 @@ namespace MathBoxing.UI
         {
             if (inputDisplayTextField != null)
             {
-                // Jika input kosong (misal setelah toggle minus), tampilkan "?" kembali
                 inputDisplayTextField.text = string.IsNullOrEmpty(currentInputString) ? "?" : currentInputString;
             }
         }
