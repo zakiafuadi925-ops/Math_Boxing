@@ -141,12 +141,7 @@ namespace MathBoxing.Core
 
         private void StartMatch()
         {   
-            if (AudioManager.Instance != null)
-            {
-                AudioManager.Instance.PlaySFX(AudioManager.Instance.sfxRoundBell);
-                AudioManager.Instance.PlayBGM(AudioManager.Instance.bgmGameplay); // Putar Musik Bertarung
-            }
-
+            
             Time.timeScale = 1f; // Pastikan skala waktu normal (1) saat ring dibuka!
             InitializeScoreUI();
             if (player1Animator != null) player1Animator.speed = 1f;
@@ -155,6 +150,12 @@ namespace MathBoxing.Core
             totalScore = 0;
             timeRemaining = 60f; 
             isGameActive = true; 
+
+            if (AudioManager.Instance != null)
+            {
+                AudioManager.Instance.PlaySFX(AudioManager.Instance.sfxRoundBell);
+                AudioManager.Instance.PlayBGM(AudioManager.Instance.bgmGameplay);
+            }
             
             StartNewQuestion(); 
             StartCoroutine(MatchTimerCoroutine()); 
