@@ -16,23 +16,22 @@ namespace MathBoxing.UI
         [Header("Player 2 UI (Opponent)")]
         [SerializeField] private TextMeshProUGUI player2NameText;
         [SerializeField] private TextMeshProUGUI player2StatusText;
-        [SerializeField] private GameObject player2LoadingSpinner; // Objek putar/loading
+        [SerializeField] private GameObject player2LoadingSpinner;
 
         [Header("Matchmaking Info")]
         [SerializeField] private TextMeshProUGUI timerText;
-        [SerializeField] private Button cancelButton;
 
         [Header("Private Room UI Elements")]
-        [SerializeField] private GameObject privateRoomGroup; // Wadah Private_Room_UI_Group
-        [SerializeField] private TextMeshProUGUI roomCodeDisplayText; // Teks penampil kode jika jadi Host
-        [SerializeField] private TMP_InputField roomCodeInputField; // Kolom ketik kode jika mau Join
+        [SerializeField] private GameObject privateRoomGroup; 
+        [SerializeField] private TextMeshProUGUI roomCodeDisplayText; 
+        [SerializeField] private TMP_InputField roomCodeInputField; 
         [SerializeField] private Button joinRoomButton;
         [SerializeField] private Button createRoomButton;
 
         [Header("General Buttons")]
-        [SerializeField] private Button cancelButton;
+        [SerializeField] private Button cancelButton; // Telah dibersihkan dari duplikasi!
 
-        // Reference ke MatchmakingManager
+        [Header("Manager Reference")]
         [SerializeField] private MatchmakingManager matchmakingManager;
 
         // Delegate / Event untuk membatalkan matchmaking
@@ -49,42 +48,9 @@ namespace MathBoxing.UI
             {
                 joinRoomButton.onClick.AddListener(OnJoinRoomButtonClicked);
             }
-
             if (createRoomButton != null)
             {
                 createRoomButton.onClick.AddListener(OnCreateRoomButtonClicked);
-            }
-        }
-
-        private void OnCreateRoomButtonClicked()
-        {
-            PlayClickSFX();
-            if (matchmakingManager != null)
-            {
-                matchmakingManager.CreatePrivateRoom();
-            }
-        }
-
-        private void PlayClickSFX()
-        {
-            if (AudioManager.Instance != null)
-            {
-                AudioManager.Instance.PlaySFX(AudioManager.Instance.sfxButtonClick);
-            }
-        }
-        
-        private void OnJoinRoomButtonClicked()
-        {
-            PlayClickSFX();
-            if (roomCodeInputField != null && !string.IsNullOrEmpty(roomCodeInputField.text))
-            {
-                string inputCode = roomCodeInputField.text.Trim().ToUpper();
-                Debug.Log($"<color=yellow>[Lobby] Mencoba Join ke Room: {inputCode}</color>");
-                
-                if (matchmakingManager != null)
-                {
-                    matchmakingManager.JoinPrivateRoom(inputCode);
-                }
             }
         }
 
@@ -108,20 +74,16 @@ namespace MathBoxing.UI
 
         public void SetupForQuickMatch()
         {
-            if (lobbyPanelObject != null) lobbyPanelObject.SetActive(true);
+            ShowLobby();
             if (privateRoomGroup != null) privateRoomGroup.SetActive(false);
         }
 
-    // Panggil fungsi ini jika masuk dari tombol Main Bersama Teman
-        // 
-        
         public void SetupForPrivateMatch()
         {
-            if (lobbyPanelObject != null) lobbyPanelObject.SetActive(true);
+            ShowLobby();
             if (privateRoomGroup != null) privateRoomGroup.SetActive(true);
         }
 
-        // Update Timer Hitung Mundur Matchmaking
         public void UpdateMatchmakingTimer(int secondsRemaining)
         {
             if (timerText != null)
@@ -130,7 +92,6 @@ namespace MathBoxing.UI
             }
         }
 
-        // Dipanggil saat Lawan Berhasil Ditemukan!
         public void OnOpponentFound(string opponentName)
         {
             if (player2NameText != null) player2NameText.text = opponentName;
@@ -138,9 +99,32 @@ namespace MathBoxing.UI
             if (player2LoadingSpinner != null) player2LoadingSpinner.SetActive(false);
         }
 
+        private void OnCreateRoomButtonClicked()
+        {
+            PlayClickSFX();
+            if (matchmakingManager != null)
+            {
+                matchmakingManager.CreatePrivateRoom();
+            }
+        }
+
+        private void OnJoinRoomButtonClicked()
+        {
+            PlayClickSFX();
+            if (roomCodeInputField != null && !string.IsNullOrEmpty(roomCodeInputField.text))
+            {
+                string inputCode = roomCodeInputField.text.Trim().ToUpper();
+                Debug.Log($"<color=yellow>[Lobby] Mencoba Join ke Room: {inputCode}</color>");
+                
+                if (matchmakingManager != null)
+                {
+                    matchmakingManager.JoinPrivateRoom(inputCode);
+                }
+            }
+        }
+
         private void OnCancelButtonClicked()
         {
-            // Play SFX Click
             if (AudioManager.Instance != null)
             {
                 AudioManager.Instance.PlaySFX(AudioManager.Instance.sfxButtonClear);
@@ -148,6 +132,14 @@ namespace MathBoxing.UI
 
             OnCancelMatchmakingPressed?.Invoke();
             HideLobby();
+        }
+
+        private void PlayClickSFX()
+        {
+            if (AudioManager.Instance != null)
+            {
+                AudioManager.Instance.PlaySFX(AudioManager.Instance.sfxButtonClick);
+            }
         }
     }
 }
