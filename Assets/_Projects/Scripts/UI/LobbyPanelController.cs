@@ -2,6 +2,7 @@ using UnityEngine;
 using TMPro;
 using UnityEngine.UI;
 using MathBoxing.Core;
+using MathBoxing.Backend;
 
 namespace MathBoxing.UI
 {
