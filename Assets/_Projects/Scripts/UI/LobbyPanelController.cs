@@ -22,6 +22,12 @@ namespace MathBoxing.UI
         [SerializeField] private TextMeshProUGUI timerText;
         [SerializeField] private Button cancelButton;
 
+        [Header("Private Room UI Elements")]
+        [SerializeField] private GameObject privateRoomGroup; // Wadah Private_Room_UI_Group
+        [SerializeField] private TextMeshProUGUI roomCodeDisplayText; // Teks penampil kode jika jadi Host
+        [SerializeField] private TMP_InputField roomCodeInputField; // Kolom ketik kode jika mau Join
+        [SerializeField] private Button joinRoomButton;
+
         // Delegate / Event untuk membatalkan matchmaking
         public delegate void CancelMatchmakingHandler();
         public event CancelMatchmakingHandler OnCancelMatchmakingPressed;
@@ -51,6 +57,34 @@ namespace MathBoxing.UI
         {
             if (lobbyPanelObject != null) lobbyPanelObject.SetActive(false);
         }
+
+        public void SetupForQuickMatch()
+{
+    ShowLobby();
+    if (privateRoomGroup != null) privateRoomGroup.SetActive(false); // Sembunyikan fitur kode
+}
+
+    // Panggil fungsi ini jika masuk dari tombol Main Bersama Teman
+    public void SetupForPrivateMatch(bool isHost, string roomCode = "")
+    {
+        ShowLobby();
+        if (privateRoomGroup != null) privateRoomGroup.SetActive(true);
+
+        if (isHost)
+        {
+            // Tampilkan kode untuk dibagikan
+            if (roomCodeDisplayText != null) roomCodeDisplayText.text = $"KODE ROOM: {roomCode}";
+            if (roomCodeInputField != null) roomCodeInputField.gameObject.SetActive(false);
+            if (joinRoomButton != null) joinRoomButton.gameObject.SetActive(false);
+        }
+        else
+        {
+            // Tampilkan kolom input untuk ketik kode
+            if (roomCodeDisplayText != null) roomCodeDisplayText.text = "MASUKKAN KODE TEMAN:";
+            if (roomCodeInputField != null) roomCodeInputField.gameObject.SetActive(true);
+            if (joinRoomButton != null) joinRoomButton.gameObject.SetActive(true);
+        }
+    }
 
         // Update Timer Hitung Mundur Matchmaking
         public void UpdateMatchmakingTimer(int secondsRemaining)
