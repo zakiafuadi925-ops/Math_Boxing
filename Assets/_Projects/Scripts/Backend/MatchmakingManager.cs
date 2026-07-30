@@ -105,6 +105,17 @@ namespace MathBoxing.Backend
             currentMatchId = "";
         }
 
+        public string GenerateRoomCode(int length = 4)
+        {
+            const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+            char[] stringChars = new char[length];
+            for (int i = 0; i < length; i++)
+            {
+                stringChars[i] = chars[UnityEngine.Random.Range(0, chars.Length)];
+            }
+            return new string(stringChars);
+        }
+
         // Coroutine Timeout Otomatis (Dipanggil dari GameMatchController)
         public IEnumerator StartTimeoutCountdown()
         {
@@ -249,6 +260,63 @@ namespace MathBoxing.Backend
                 {
                     Debug.LogError($"[Matchmaking] Gagal menghapus kamar dari server: {request.error}");
                 }
+            }
+        }
+
+                // 1. BUAT PRIVATE ROOM (HOST)
+        public async void CreatePrivateRoom()
+        {
+            string privateCode = GenerateRoomCode(4); // Contoh hasil: "A8K9"
+            
+            // Simpan ke Supabase dengan status waiting & is_private = true
+            var matchData = new Dictionary<string, object>
+            {
+                { "player_1_id", localPlayerId },
+                { "status", "waiting" },
+                { "is_private", true },
+                { "room_code", privateCode }
+            };
+
+            // Panggil API Supabase Insert ke tabel 'matches'
+            // ... (sesuaikan dengan syntax insert Supabase-mu) ...
+
+            Debug.Log($"<color=cyan>[Private Match] Room dibuat dengan Kode: {privateCode}</color>");
+            
+            // Tampilkan kode ini ke UI Lobby agar pemain bisa memberitahu temannya
+            if (lobbyPanelController != null)
+            {
+                lobbyPanelController.DisplayPrivateRoomCode(privateCode);
+            }
+
+            // Mulai listening / polling untuk menunggu Player 2 masuk ke room_code ini
+            StartCoroutine(ListenForFriendToJoin(privateCode));
+        }
+
+        // 2. JOIN PRIVATE ROOM (GUEST / TEMAN)
+        public async void JoinPrivateRoom(string inputCode)
+        {
+            inputCode = inputCode.ToUpper().Trim(); // Pastikan huruf kapital semua
+
+            if (string.IsNullOrEmpty(inputCode))
+            {
+                Debug.LogWarning("[Private Match] Kode room tidak boleh kosong!");
+                return;
+            }
+
+            // Cari di Supabase match dengan room_code = inputCode DAN status = "waiting"
+            // Jika Ditemukan: Update player_2_id = localPlayerId & status = "in_progress"
+            
+            bool isSuccess = await SupabaseJoinMatchByCode(inputCode, localPlayerId);
+
+            if (isSuccess)
+            {
+                Debug.Log("<color=green>[Private Match] Berhasil masuk ke room teman!</color>");
+                // Beritahu Controller untuk memulai match!
+            }
+            else
+            {
+                Debug.LogError("[Private Match] Kode room tidak ditemukan atau room sudah penuh!");
+                // Tampilkan teks error di UI: "Kode Tidak Valid / Room Penuh!"
             }
         }
 
