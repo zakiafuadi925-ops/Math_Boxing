@@ -107,6 +107,18 @@ namespace MathBoxing.UI
             if (leaderboardPanel != null) leaderboardPanel.SetActive(false);
         }
 
+        public void OnPrivateMatchButtonClicked()
+        {
+            PlayButtonSFX();
+            if (mainMenuPanel != null) mainMenuPanel.SetActive(false);
+
+            if (gameMatchController != null)
+            {
+                gameMatchController.StartPrivateMatchFlow();
+            }
+        }
+
+
         public void OnQuitButtonClicked()
         {
             if (AudioManager.Instance != null)

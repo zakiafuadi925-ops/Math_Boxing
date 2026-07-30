@@ -27,6 +27,13 @@ namespace MathBoxing.UI
         [SerializeField] private TextMeshProUGUI roomCodeDisplayText; // Teks penampil kode jika jadi Host
         [SerializeField] private TMP_InputField roomCodeInputField; // Kolom ketik kode jika mau Join
         [SerializeField] private Button joinRoomButton;
+        [SerializeField] private Button createRoomButton;
+
+        [Header("General Buttons")]
+        [SerializeField] private Button cancelButton;
+
+        // Reference ke MatchmakingManager
+        [SerializeField] private MatchmakingManager matchmakingManager;
 
         // Delegate / Event untuk membatalkan matchmaking
         public delegate void CancelMatchmakingHandler();
@@ -37,6 +44,47 @@ namespace MathBoxing.UI
             if (cancelButton != null)
             {
                 cancelButton.onClick.AddListener(OnCancelButtonClicked);
+            }
+            if (joinRoomButton != null) 
+            {
+                joinRoomButton.onClick.AddListener(OnJoinRoomButtonClicked);
+            }
+
+            if (createRoomButton != null)
+            {
+                createRoomButton.onClick.AddListener(OnCreateRoomButtonClicked);
+            }
+        }
+
+        private void OnCreateRoomButtonClicked()
+        {
+            PlayClickSFX();
+            if (matchmakingManager != null)
+            {
+                matchmakingManager.CreatePrivateRoom();
+            }
+        }
+
+        private void PlayClickSFX()
+        {
+            if (AudioManager.Instance != null)
+            {
+                AudioManager.Instance.PlaySFX(AudioManager.Instance.sfxButtonClick);
+            }
+        }
+        
+        private void OnJoinRoomButtonClicked()
+        {
+            PlayClickSFX();
+            if (roomCodeInputField != null && !string.IsNullOrEmpty(roomCodeInputField.text))
+            {
+                string inputCode = roomCodeInputField.text.Trim().ToUpper();
+                Debug.Log($"<color=yellow>[Lobby] Mencoba Join ke Room: {inputCode}</color>");
+                
+                if (matchmakingManager != null)
+                {
+                    matchmakingManager.JoinPrivateRoom(inputCode);
+                }
             }
         }
 
@@ -59,32 +107,19 @@ namespace MathBoxing.UI
         }
 
         public void SetupForQuickMatch()
-{
-    ShowLobby();
-    if (privateRoomGroup != null) privateRoomGroup.SetActive(false); // Sembunyikan fitur kode
-}
+        {
+            if (lobbyPanelObject != null) lobbyPanelObject.SetActive(true);
+            if (privateRoomGroup != null) privateRoomGroup.SetActive(false);
+        }
 
     // Panggil fungsi ini jika masuk dari tombol Main Bersama Teman
-    public void SetupForPrivateMatch(bool isHost, string roomCode = "")
-    {
-        ShowLobby();
-        if (privateRoomGroup != null) privateRoomGroup.SetActive(true);
-
-        if (isHost)
+        // 
+        
+        public void SetupForPrivateMatch()
         {
-            // Tampilkan kode untuk dibagikan
-            if (roomCodeDisplayText != null) roomCodeDisplayText.text = $"KODE ROOM: {roomCode}";
-            if (roomCodeInputField != null) roomCodeInputField.gameObject.SetActive(false);
-            if (joinRoomButton != null) joinRoomButton.gameObject.SetActive(false);
+            if (lobbyPanelObject != null) lobbyPanelObject.SetActive(true);
+            if (privateRoomGroup != null) privateRoomGroup.SetActive(true);
         }
-        else
-        {
-            // Tampilkan kolom input untuk ketik kode
-            if (roomCodeDisplayText != null) roomCodeDisplayText.text = "MASUKKAN KODE TEMAN:";
-            if (roomCodeInputField != null) roomCodeInputField.gameObject.SetActive(true);
-            if (joinRoomButton != null) joinRoomButton.gameObject.SetActive(true);
-        }
-    }
 
         // Update Timer Hitung Mundur Matchmaking
         public void UpdateMatchmakingTimer(int secondsRemaining)
