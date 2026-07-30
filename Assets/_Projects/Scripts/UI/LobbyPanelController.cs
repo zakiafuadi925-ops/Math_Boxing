@@ -1,6 +1,7 @@
 using UnityEngine;
 using TMPro;
 using UnityEngine.UI;
+using MathBoxing.Core;
 
 namespace MathBoxing.UI
 {
