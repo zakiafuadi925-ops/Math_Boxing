@@ -106,6 +106,7 @@ namespace MathBoxing.UI
         /// <summary>
         /// Dipanggil oleh tombol [CLR] (Clear).
         /// </summary>
+        /// 1232
         public void PressClearButton()
         {
             // SFX Clear Button
