@@ -4,6 +4,7 @@ using System.Collections;
 using System.Collections.Generic; // TAMBAHAN: Untuk Dictionary
 using System.Text;
 using TMPro;
+using MathBoxing.UI;
 
 namespace MathBoxing.Backend
 {
@@ -14,6 +15,9 @@ namespace MathBoxing.Backend
 
         [Header("UI Component")]
         [SerializeField] private TMP_Text matchmakingTimerText; 
+
+        [Header("UI Reference")]
+        [SerializeField] private LobbyPanelController lobbyPanelController;
 
         // Variabel untuk menyimpan kode room yang baru saja dibuat
         public string CurrentRoomCode { get; private set; }
