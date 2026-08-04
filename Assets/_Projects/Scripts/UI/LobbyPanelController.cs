@@ -84,7 +84,20 @@ namespace MathBoxing.UI
         {
             ShowLobby();
             if (privateRoomGroup != null) privateRoomGroup.SetActive(true);
+
+            // Reset Teks & Input
+            if (roomCodeDisplayText != null) roomCodeDisplayText.text = "MAIN BERSAMA TEMAN";
+            if (roomCodeInputField != null)
+            {
+                roomCodeInputField.text = "";
+                roomCodeInputField.interactable = true;
+            }
+
+            // Tampilkan kembali tombol
+            if (createRoomButton != null) createRoomButton.gameObject.SetActive(true);
+            if (joinRoomButton != null) joinRoomButton.gameObject.SetActive(true);
         }
+        
 
         public void UpdateMatchmakingTimer(int secondsRemaining)
         {
@@ -161,7 +174,14 @@ namespace MathBoxing.UI
             if (roomCodeInputField != null)
             {
                 roomCodeInputField.text = roomCode;
+                roomCodeInputField.interactable = false;
             }
+
+            if (createRoomButton != null) createRoomButton.gameObject.SetActive(false);
+            if (joinRoomButton != null) joinRoomButton.gameObject.SetActive(false);
+            
+            // Tampilkan Spinner di Player 2 untuk menandakan sedang menunggu lawan masuk
+            if (player2LoadingSpinner != null) player2LoadingSpinner.SetActive(true);
         }
     }
 }
