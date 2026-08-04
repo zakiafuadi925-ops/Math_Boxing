@@ -155,7 +155,7 @@ namespace MathBoxing.UI
         {
             if (roomCodeDisplayText != null)
             {
-                roomCodeDisplayText.text = $"KODE ROOM: {roomCode}";
+                roomCodeDisplayText.text = "KODE ROOM KAMU: " + roomCode;
             }
 
             if (roomCodeInputField != null)

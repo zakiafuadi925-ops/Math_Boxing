@@ -15,6 +15,9 @@ namespace MathBoxing.Backend
         [Header("UI Component")]
         [SerializeField] private TMP_Text matchmakingTimerText; 
 
+        // Variabel untuk menyimpan kode room yang baru saja dibuat
+        public string CurrentRoomCode { get; private set; }
+
         [Header("Timeout Rules")]
         public float matchmakingTimeout = 30f; 
 
@@ -249,6 +252,10 @@ namespace MathBoxing.Backend
             currentRoomCode = GenerateRoomCode(4);
             Debug.Log($"<color=cyan>[Private Room] Membuat Room dengan Kode: {currentRoomCode}</color>");
             
+            if (lobbyPanelController != null)
+            {
+                lobbyPanelController.DisplayCreatedRoomCode(currentRoomCode);
+            }
             createRoomCoroutineInstance = StartCoroutine(CreatePrivateRoomCoroutine(currentRoomCode));
         }
 
