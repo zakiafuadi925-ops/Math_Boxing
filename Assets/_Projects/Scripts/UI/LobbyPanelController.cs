@@ -107,6 +107,12 @@ namespace MathBoxing.UI
             if (matchmakingManager != null)
             {
                 matchmakingManager.CreatePrivateRoom();
+
+                if (roomCodeInputField != null && matchmakingManager != null)
+                {
+                    // Ambil string kode dari property/variable room milik MatchmakingManager
+                    roomCodeInputField.text = matchmakingManager.CurrentRoomCode; 
+                }
             }
         }
 
@@ -141,6 +147,20 @@ namespace MathBoxing.UI
             if (AudioManager.Instance != null)
             {
                 AudioManager.Instance.PlaySFX(AudioManager.Instance.sfxButtonClick);
+            }
+        }
+
+        // Panggil fungsi ini dari MatchmakingManager saat respons Supabase/backend diterima
+        public void DisplayCreatedRoomCode(string roomCode)
+        {
+            if (roomCodeDisplayText != null)
+            {
+                roomCodeDisplayText.text = $"KODE ROOM: {roomCode}";
+            }
+
+            if (roomCodeInputField != null)
+            {
+                roomCodeInputField.text = roomCode;
             }
         }
     }
