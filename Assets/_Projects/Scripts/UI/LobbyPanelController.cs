@@ -31,10 +31,11 @@ namespace MathBoxing.UI
         [SerializeField] private Button createRoomButton;
 
         [Header("General Buttons")]
-        [SerializeField] private Button cancelButton; // Telah dibersihkan dari duplikasi!
+        [SerializeField] private Button cancelButton;
 
         [Header("Manager Reference")]
         [SerializeField] private MatchmakingManager matchmakingManager;
+        // DIHAPUS: roomCodeInputField duplikat yang ada di sini tadi!
 
         // Delegate / Event untuk membatalkan matchmaking
         public delegate void CancelMatchmakingHandler();
@@ -44,14 +45,17 @@ namespace MathBoxing.UI
         {
             if (cancelButton != null)
             {
+                cancelButton.onClick.RemoveAllListeners();
                 cancelButton.onClick.AddListener(OnCancelButtonClicked);
             }
             if (joinRoomButton != null) 
             {
+                joinRoomButton.onClick.RemoveAllListeners();
                 joinRoomButton.onClick.AddListener(OnJoinRoomButtonClicked);
             }
             if (createRoomButton != null)
             {
+                createRoomButton.onClick.RemoveAllListeners();
                 createRoomButton.onClick.AddListener(OnCreateRoomButtonClicked);
             }
         }
@@ -97,7 +101,6 @@ namespace MathBoxing.UI
             if (createRoomButton != null) createRoomButton.gameObject.SetActive(true);
             if (joinRoomButton != null) joinRoomButton.gameObject.SetActive(true);
         }
-        
 
         public void UpdateMatchmakingTimer(int secondsRemaining)
         {
@@ -120,27 +123,40 @@ namespace MathBoxing.UI
             if (matchmakingManager != null)
             {
                 matchmakingManager.CreatePrivateRoom();
-
-                if (roomCodeInputField != null && matchmakingManager != null)
-                {
-                    // Ambil string kode dari property/variable room milik MatchmakingManager
-                    roomCodeInputField.text = matchmakingManager.CurrentRoomCode; 
-                }
+            }
+            else
+            {
+                Debug.LogError("[Lobby] MatchmakingManager belum dipasang di Inspector!");
             }
         }
 
         private void OnJoinRoomButtonClicked()
         {
             PlayClickSFX();
-            if (roomCodeInputField != null && !string.IsNullOrEmpty(roomCodeInputField.text))
+
+            if (roomCodeInputField == null)
             {
-                string inputCode = roomCodeInputField.text.Trim().ToUpper();
-                Debug.Log($"<color=yellow>[Lobby] Mencoba Join ke Room: {inputCode}</color>");
-                
-                if (matchmakingManager != null)
-                {
-                    matchmakingManager.JoinPrivateRoom(inputCode);
-                }
+                Debug.LogError("[Lobby] Component roomCodeInputField belum di-drag ke Inspector!");
+                return;
+            }
+
+            string inputCode = roomCodeInputField.text.Trim().ToUpper();
+
+            if (string.IsNullOrEmpty(inputCode))
+            {
+                Debug.LogWarning("[Lobby] Kode room tidak boleh kosong!");
+                return;
+            }
+
+            Debug.Log($"<color=yellow>[Lobby] Menekan Join. Mengirim kode: '{inputCode}' ke Supabase...</color>");
+            
+            if (matchmakingManager != null)
+            {
+                matchmakingManager.JoinPrivateRoom(inputCode);
+            }
+            else
+            {
+                Debug.LogError("[Lobby] MatchmakingManager belum di-assign di Inspector!");
             }
         }
 
@@ -163,7 +179,6 @@ namespace MathBoxing.UI
             }
         }
 
-        // Panggil fungsi ini dari MatchmakingManager saat respons Supabase/backend diterima
         public void DisplayCreatedRoomCode(string roomCode)
         {
             if (roomCodeDisplayText != null)
@@ -180,7 +195,6 @@ namespace MathBoxing.UI
             if (createRoomButton != null) createRoomButton.gameObject.SetActive(false);
             if (joinRoomButton != null) joinRoomButton.gameObject.SetActive(false);
             
-            // Tampilkan Spinner di Player 2 untuk menandakan sedang menunggu lawan masuk
             if (player2LoadingSpinner != null) player2LoadingSpinner.SetActive(true);
         }
     }
