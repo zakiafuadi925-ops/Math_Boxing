@@ -265,13 +265,22 @@ namespace MathBoxing.Backend
 
         private IEnumerator CreatePrivateRoomCoroutine(string roomCode)
         {
-            if (config == null) yield break;
+            // Tunggu sampai ConfigManager selesai membaca file JSON
+            while (ConfigManager.Instance == null || !ConfigManager.Instance.IsLoaded)
+            {
+                yield return null;
+            }
+
+            var config = ConfigManager.Instance.Config;
+            if (config == null)
+            {
+                Debug.LogError("[Matchmaking] Gagal: Data Config kosong!");
+                yield break;
+            }
 
             currentMatchId = System.Guid.NewGuid().ToString();
+            string url = $"{config.supabaseURL}/rest/v1/live_matches"; // Membaca dari JSON
 
-            string url = $"{config.supabaseURL}/rest/v1/live_matches";
-
-            // PASTIKAN: status = 'waiting', p2_id = null (jangan ditulis di JSON), p1_score = 0, p2_score = 0
             string jsonPayload = "{" +
                 $"\"match_id\":\"{currentMatchId}\"," +
                 $"\"p1_id\":\"{myPlayerId}\"," +
@@ -292,14 +301,14 @@ namespace MathBoxing.Backend
                 request.downloadHandler = new DownloadHandlerBuffer();
 
                 request.SetRequestHeader("Content-Type", "application/json");
-                request.SetRequestHeader("apikey", config.supabaseApiKey);
-                request.SetRequestHeader("Authorization", $"Bearer {config.supabaseApiKey}");
+                request.SetRequestHeader("apikey", config.supabaseApiKey); // Membaca dari JSON
+                request.SetRequestHeader("Authorization", $"Bearer {config.supabaseApiKey}"); // Membaca dari JSON
 
                 yield return request.SendWebRequest();
 
                 if (request.result == UnityWebRequest.Result.Success || request.responseCode == 201)
                 {
-                    Debug.Log($"<color=green>[Private Room] Berhasil dibuat di Supabase! Kode: {roomCode}</color>");
+                    Debug.Log($"<color=green>[Private Room] Berhasil dibuat! Kode: {roomCode}</color>");
                     isMatchReady = false;
 
                     if (realtimeListener != null)
