@@ -271,12 +271,12 @@ namespace MathBoxing.Backend
 
             string url = $"{config.supabaseURL}/rest/v1/live_matches";
 
-            // Mengirim payload lengkap dengan room_code
+            // PASTIKAN: status = 'waiting', p2_id = null (jangan ditulis di JSON), p1_score = 0, p2_score = 0
             string jsonPayload = "{" +
                 $"\"match_id\":\"{currentMatchId}\"," +
                 $"\"p1_id\":\"{myPlayerId}\"," +
-                "\"status\":\"waiting\"," +
                 $"\"room_code\":\"{roomCode}\"," +
+                "\"status\":\"waiting\"," +
                 "\"current_question\":\"0+0\"," + 
                 "\"current_answer\":0," +          
                 "\"question_version\":1," +        
@@ -299,7 +299,7 @@ namespace MathBoxing.Backend
 
                 if (request.result == UnityWebRequest.Result.Success || request.responseCode == 201)
                 {
-                    Debug.Log($"<color=green>[Private Room] Berhasil dibuat! Kode: {roomCode}</color>");
+                    Debug.Log($"<color=green>[Private Room] Berhasil dibuat di Supabase! Kode: {roomCode}</color>");
                     isMatchReady = false;
 
                     if (realtimeListener != null)
