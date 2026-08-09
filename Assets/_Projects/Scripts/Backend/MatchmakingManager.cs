@@ -46,9 +46,8 @@ namespace MathBoxing.Backend
         {
             if (Instance != null && Instance != this)
             {
-                // Hancurkan HANYA komponen skrip ini
                 Destroy(this);
-                return; // LANGSUNG RETURN agar kode di bawahnya tidak berjalan!
+                return;
             }
 
             Instance = this;
@@ -62,6 +61,11 @@ namespace MathBoxing.Backend
             if (supabaseManager == null)
             {
                 supabaseManager = FindAnyObjectByType<SupabaseManager>();
+            }
+
+            if (realtimeListener == null)
+            {
+                realtimeListener = FindAnyObjectByType<SupabaseRealtimeListener>();
             }
         }
 
@@ -241,6 +245,11 @@ namespace MathBoxing.Backend
                     currentMatchId = targetMatchId;
                     Debug.Log($"<color=green>[Matchmaking] SUKSES! Kamu masuk sebagai Player 2. Pertandingan AKTIF!</color>");
                     isMatchReady = true;
+
+                    if (realtimeListener != null)
+                    {
+                        realtimeListener.StartListening();
+                    }
                 }
                 else
                 {
@@ -410,25 +419,25 @@ namespace MathBoxing.Backend
                         currentMatchId = responseText.Substring(startIndex, endIndex - startIndex);
                     }
 
-                    // 2. ATUR PERAN PLAYER LOKAL (Joiner pasti Player 2)
+                    // 2. ATUR PERAN PLAYER LOKAL & TANDA MATCH READY
                     isPlayer1 = false;
                     isMatchReady = true;
 
                     Debug.Log($"<color=green>[Private Room] Berhasil join MatchID: {currentMatchId}! Game Siap!</color>");
 
-                    // 3. AKTIFKAN LISTENER REALTIME SUPABASE UNTUK MATCH ID INI
-                    SupabaseRealtimeListener listener = FindAnyObjectByType<SupabaseRealtimeListener>();
-                    if (listener != null)
+                    // 3. AKTIFKAN LISTENER REALTIME SUPABASE
+                    if (realtimeListener != null)
                     {
-                        listener.StartListening(currentMatchId, isPlayer1);
+                        realtimeListener.StartListening();
                     }
                     else
                     {
-                        Debug.LogWarning("[Private Room] SupabaseRealtimeListener tidak ditemukan di Scene!");
+                        Debug.LogWarning("[Private Room] SupabaseRealtimeListener tidak terhubung di Inspector!");
                     }
-
-                    // 4. PANGGUL EVENT MATCH READY (Jika menggunakan Action/Event)
-                    // OnMatchReady?.Invoke();
+                }
+                else
+                {
+                    Debug.LogError($"[Private Room] Gagal Join! Kode salah, expired, atau room penuh. Respon: {responseText}");
                 }
             }
         }
