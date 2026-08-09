@@ -99,6 +99,37 @@ namespace MathBoxing.Core
             {
                 lobbyPanelController.SetupForPrivateMatch();
             }
+
+            StartCoroutine(WaitForPrivateMatchReadyCoroutine());
+        }
+
+        private IEnumerator WaitForPrivateMatchReadyCoroutine()
+        {
+            // Tunggu sampai Join/Create private room selesai
+            while (matchmakingManager != null && !matchmakingManager.isMatchReady)
+            {
+                yield return null;
+            }
+
+            if (matchmakingManager != null && matchmakingManager.isMatchReady)
+            {
+                Debug.Log("<color=green>[Controller] Private Match Valid! Memulai pertarungan...</color>");
+
+                if (lobbyPanelController != null)
+                {
+                    lobbyPanelController.OnOpponentFound("Player Online (Private)");
+                }
+
+                yield return new WaitForSeconds(1.5f);
+
+                if (lobbyPanelController != null) 
+                {
+                    lobbyPanelController.HideLobby();
+                }
+
+                // Transisi ke Arena Pertarungan
+                StartMatch(); 
+            }
         }
 
         public void StartMatchmakingFlow()
