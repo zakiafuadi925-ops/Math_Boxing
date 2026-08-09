@@ -10,8 +10,8 @@ namespace MathBoxing.Core
         [Header("References")]
         [SerializeField] private MathBoxing.UI.NumpadController numpadController;
         [SerializeField] private MathGenerator mathGenerator; 
-        [SerializeField] private TextMeshProUGUI questionTextField; // Display_text di dalam UI_Display_Panel
-        [SerializeField] private TextMeshProUGUI timerTextField;   // Teks di dalam Timer_Panel
+        [SerializeField] private TextMeshProUGUI questionTextField; 
+        [SerializeField] private TextMeshProUGUI timerTextField;   
 
         [Header("Visual & Animations")]
         [SerializeField] private Animator player1Animator;
@@ -39,7 +39,6 @@ namespace MathBoxing.Core
         [Header("Score System")]
         [SerializeField] private int totalScore = 0; 
 
-        // Pelacak Coroutine Animasi
         private Coroutine player1ResetCoroutine;
         private Coroutine player2ResetCoroutine;
 
@@ -55,6 +54,9 @@ namespace MathBoxing.Core
         [Header("UI Panel References")]
         [SerializeField] private MathBoxing.UI.LobbyPanelController lobbyPanelController;
         [SerializeField] private GameObject mainMenuPanel;
+
+        [Header("Scene Config")]
+        [SerializeField] private string mainMenuSceneName = "01-MainMenu"; 
 
         private void OnEnable()
         {
@@ -72,17 +74,12 @@ namespace MathBoxing.Core
         {
             isGameActive = false;
 
-            // Sembunyikan elemen gameplay saat di awal game (Main Menu)
             if (numpadPanel != null) numpadPanel.SetActive(false);
             if (inputPanel != null) inputPanel.SetActive(false);
             if (gameplayHUDGroup != null) gameplayHUDGroup.SetActive(false);
             if (battleArena != null) battleArena.SetActive(false);
             if (gameOverPanel != null) gameOverPanel.SetActive(false);
         }
-
-        // ========================================================================
-        // ALUR DARI MAIN MENU CONTROLLER
-        // ========================================================================
 
         public void StartQuickMatchFlow()
         {
@@ -115,6 +112,9 @@ namespace MathBoxing.Core
             {
                 matchmakingManager.FindMatch();
                 
+                // Jeda steril untuk memberi waktu HTTP Request membuat Room ID
+                yield return new WaitForSeconds(0.5f);
+
                 if (matchmakingManager.forceAsPlayer1)
                 {
                     StartCoroutine(matchmakingManager.StartTimeoutCountdown());
@@ -124,12 +124,6 @@ namespace MathBoxing.Core
 
                 while (!matchmakingManager.isMatchReady && searchTimer > 0)
                 {
-                    if (string.IsNullOrEmpty(matchmakingManager.currentMatchId))
-                    {
-                        if (lobbyPanelController != null) lobbyPanelController.HideLobby();
-                        yield break; 
-                    }
-
                     if (lobbyPanelController != null)
                     {
                         lobbyPanelController.UpdateMatchmakingTimer(Mathf.CeilToInt(searchTimer));
@@ -155,7 +149,7 @@ namespace MathBoxing.Core
 
                 if (lobbyPanelController != null)
                 {
-                    lobbyPanelController.OnOpponentFound("Player 2 (Online)");
+                    lobbyPanelController.OnOpponentFound("Player Online");
                 }
 
                 yield return new WaitForSeconds(1.5f);
@@ -171,7 +165,6 @@ namespace MathBoxing.Core
             Time.timeScale = 1f; 
             InitializeScoreUI();
 
-            // Aktifkan Arena dan HUD Gameplay
             if (battleArena != null) battleArena.SetActive(true);
             if (gameplayHUDGroup != null) gameplayHUDGroup.SetActive(true);
             if (numpadPanel != null) numpadPanel.SetActive(true);
@@ -238,6 +231,8 @@ namespace MathBoxing.Core
         {
             if (!isGameActive) return;
 
+            bool isP1 = matchmakingManager != null ? matchmakingManager.isPlayer1 : true;
+
             if (playerAnswer == currentQuestion.correctAnswer)
             {
                 totalScore += currentQuestion.scoreValue;
@@ -249,41 +244,35 @@ namespace MathBoxing.Core
 
                 Debug.Log($"<color=green>Jawaban BENAR!</color> +{currentQuestion.scoreValue} Poin. Total: {totalScore}");
                 
-                UpdateLocalScoreUI(totalScore);
+                UpdateScoreDisplay(isP1, totalScore);
 
                 int randomAttack = Random.Range(1, 5); 
 
-                if (player1Animator != null)
+                Animator myAnimator = isP1 ? player1Animator : player2Animator;
+                Animator enemyAnimator = isP1 ? player2Animator : player1Animator;
+
+                if (myAnimator != null)
                 {
-                    if (player1ResetCoroutine != null) StopCoroutine(player1ResetCoroutine);
-                    player1Animator.SetInteger("actionType", randomAttack);
-                    player1ResetCoroutine = StartCoroutine(ResetActionTypeCoroutine(player1Animator, 1));
+                    myAnimator.SetInteger("actionType", randomAttack);
+                    StartCoroutine(ResetActionTypeCoroutine(myAnimator, isP1 ? 1 : 2));
                 }
 
-                if (player2Animator != null)
+                if (enemyAnimator != null)
                 {
-                    if (player2ResetCoroutine != null) StopCoroutine(player2ResetCoroutine);
-                    
                     bool isEnemyBlocking = Random.value > 0.5f; 
                     if (isEnemyBlocking)
                     {
-                        player2Animator.SetBool("isBlocking", true);
-                        player2ResetCoroutine = StartCoroutine(ResetBlockStatusCoroutine(player2Animator, 2));
+                        enemyAnimator.SetBool("isBlocking", true);
+                        StartCoroutine(ResetBlockStatusCoroutine(enemyAnimator, isP1 ? 2 : 1));
 
-                        if (AudioManager.Instance != null)
-                        {
-                            AudioManager.Instance.PlaySFX(AudioManager.Instance.sfxPunchMiss);
-                        }
+                        if (AudioManager.Instance != null) AudioManager.Instance.PlaySFX(AudioManager.Instance.sfxPunchMiss);
                     }
                     else
                     {
-                        player2Animator.SetInteger("actionType", 6); 
-                        player2ResetCoroutine = StartCoroutine(ResetActionTypeCoroutine(player2Animator, 2));
+                        enemyAnimator.SetInteger("actionType", 6); 
+                        StartCoroutine(ResetActionTypeCoroutine(enemyAnimator, isP1 ? 2 : 1));
 
-                        if (AudioManager.Instance != null)
-                        {
-                            AudioManager.Instance.PlaySFX(AudioManager.Instance.sfxPunchHit);
-                        }
+                        if (AudioManager.Instance != null) AudioManager.Instance.PlaySFX(AudioManager.Instance.sfxPunchHit);
                     }
                 }
 
@@ -302,42 +291,6 @@ namespace MathBoxing.Core
                 {
                     numpadController.TriggerWrongAnswerPenalty();
                 }
-
-                int randomEnemyAttack = Random.Range(1, 5);
-
-                if (player1Animator != null)
-                {
-                    if (player1ResetCoroutine != null) StopCoroutine(player1ResetCoroutine);
-                    
-                    bool isPlayer1Blocking = Random.value > 0.5f;
-                    if (isPlayer1Blocking)
-                    {
-                        player1Animator.SetBool("isBlocking", true);
-                        player1ResetCoroutine = StartCoroutine(ResetBlockStatusCoroutine(player1Animator, 1));
-
-                        if (AudioManager.Instance != null)
-                        {
-                            AudioManager.Instance.PlaySFX(AudioManager.Instance.sfxPunchMiss);
-                        }
-                    }
-                    else
-                    {
-                        player1Animator.SetInteger("actionType", 6); 
-                        player1ResetCoroutine = StartCoroutine(ResetActionTypeCoroutine(player1Animator, 1));
-
-                        if (AudioManager.Instance != null)
-                        {
-                            AudioManager.Instance.PlaySFX(AudioManager.Instance.sfxPunchHit);
-                        }
-                    }
-                }
-                
-                if (player2Animator != null)
-                {
-                    if (player2ResetCoroutine != null) StopCoroutine(player2ResetCoroutine);
-                    player2Animator.SetInteger("actionType", randomEnemyAttack);
-                    player2ResetCoroutine = StartCoroutine(ResetActionTypeCoroutine(player2Animator, 2));
-                }
             }
         }
 
@@ -345,70 +298,52 @@ namespace MathBoxing.Core
         {
             Debug.Log($"<color=magenta>[Realtime] Lawan menyerang! Skor mereka: {newOpponentScore}</color>");
 
-            int randomEnemyAttack = Random.Range(1, 5);
+            bool isP1 = matchmakingManager != null ? matchmakingManager.isPlayer1 : true;
+            UpdateScoreDisplay(!isP1, newOpponentScore);
 
-            if (player2Animator != null)
+            Animator enemyAnimator = isP1 ? player2Animator : player1Animator;
+            Animator myAnimator = isP1 ? player1Animator : player2Animator;
+
+            if (enemyAnimator != null)
             {
-                if (player2ResetCoroutine != null) StopCoroutine(player2ResetCoroutine);
-                player2Animator.SetInteger("actionType", randomEnemyAttack);
-                player2ResetCoroutine = StartCoroutine(ResetActionTypeCoroutine(player2Animator, 2));
+                enemyAnimator.SetInteger("actionType", Random.Range(1, 5));
+                StartCoroutine(ResetActionTypeCoroutine(enemyAnimator, isP1 ? 2 : 1));
             }
 
-            if (player1Animator != null)
+            if (myAnimator != null)
             {
-                if (player1ResetCoroutine != null) StopCoroutine(player1ResetCoroutine);
-                player1Animator.SetInteger("actionType", 6); 
-                player1ResetCoroutine = StartCoroutine(ResetActionTypeCoroutine(player1Animator, 1));
+                myAnimator.SetInteger("actionType", 6); 
+                StartCoroutine(ResetActionTypeCoroutine(myAnimator, isP1 ? 1 : 2));
             }
-
-            UpdateOpponentScoreUI(newOpponentScore);
         }
 
         private IEnumerator ResetActionTypeCoroutine(Animator targetAnimator, int playerIndex)
         {
             yield return new WaitForSeconds(0.4f); 
-            
-            if (targetAnimator != null)
-            {
-                targetAnimator.SetInteger("actionType", 0); 
-            }
-
-            if (playerIndex == 1) player1ResetCoroutine = null;
-            if (playerIndex == 2) player2ResetCoroutine = null;
+            if (targetAnimator != null) targetAnimator.SetInteger("actionType", 0); 
         }
 
         private IEnumerator ResetBlockStatusCoroutine(Animator targetAnimator, int playerIndex)
         {
             yield return new WaitForSeconds(0.3f); 
-            
-            if (targetAnimator != null)
-            {
-                targetAnimator.SetBool("isBlocking", false); 
-            }
-
-            if (playerIndex == 1) player1ResetCoroutine = null;
-            if (playerIndex == 2) player2ResetCoroutine = null;
+            if (targetAnimator != null) targetAnimator.SetBool("isBlocking", false); 
         }        
         
         private void InitializeScoreUI()
         {
-            if (player1ScoreTextField != null) player1ScoreTextField.text = "PLAYER_1 SCORE: 0";
-            if (player2ScoreTextField != null) player2ScoreTextField.text = "PLAYER_2 SCORE: 0";
+            if (player1ScoreTextField != null) player1ScoreTextField.text = "P1 SCORE: 0";
+            if (player2ScoreTextField != null) player2ScoreTextField.text = "P2 SCORE: 0";
         }
 
-        private void UpdateLocalScoreUI(int newScore)
+        private void UpdateScoreDisplay(bool isPlayer1Target, int score)
         {
-            if (player1ScoreTextField != null)
+            if (isPlayer1Target && player1ScoreTextField != null)
             {
-                player1ScoreTextField.text = $"PLAYER_1 SCORE: {newScore}";
+                player1ScoreTextField.text = $"P1 SCORE: {score}";
             }
-        }
-
-        public void UpdateOpponentScoreUI(int opponentScore)
-        {
-            if (player2ScoreTextField != null)
+            else if (!isPlayer1Target && player2ScoreTextField != null)
             {
-                player2ScoreTextField.text = $"PLAYER_2 SCORE: {opponentScore}";
+                player2ScoreTextField.text = $"P2 SCORE: {score}";
             }
         }
 
@@ -423,9 +358,6 @@ namespace MathBoxing.Core
                 AudioManager.Instance.PlaySFX(AudioManager.Instance.bgmVictory); 
             }
 
-            if (player1ResetCoroutine != null) StopCoroutine(player1ResetCoroutine);
-            if (player2ResetCoroutine != null) StopCoroutine(player2ResetCoroutine);
-            
             if (timerTextField != null) timerTextField.text = "TIME UP!"; 
             if (questionTextField != null) questionTextField.text = "FINISHED"; 
 
@@ -438,12 +370,10 @@ namespace MathBoxing.Core
                 if (totalScore < finalOpponentScore)
                 {
                     if (player1Animator != null) player1Animator.SetBool("isDead", true);
-                    Debug.Log("<color=red>[Match Over] Kamu KO!</color>");
                 }
                 else if (totalScore > finalOpponentScore)
                 {
                     if (player2Animator != null) player2Animator.SetBool("isDead", true);
-                    Debug.Log("<color=green>[Match Over] Lawan KO!</color>");
                 }
             }
 
@@ -452,18 +382,6 @@ namespace MathBoxing.Core
 
             if (numpadPanel != null) numpadPanel.SetActive(false);
             if (inputPanel != null) inputPanel.SetActive(false);
-        }
-
-        public void RetryGame()
-        {
-            Time.timeScale = 1f;
-
-            if (realtimeListener != null)
-            {
-                realtimeListener.StopListening();
-            }
-
-            SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
         }
 
         public void ExitToMainMenu()
@@ -475,16 +393,23 @@ namespace MathBoxing.Core
                 realtimeListener.StopListening();
             }
 
-            if (gameOverPanel != null) gameOverPanel.SetActive(false);
-            if (lobbyPanelController != null) lobbyPanelController.HideLobby();
-            if (mainMenuPanel != null) mainMenuPanel.SetActive(true);
+            if (matchmakingManager != null)
+            {
+                matchmakingManager.CancelMatchmaking();
+            }
 
-            SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
-        }
-
-        public void OpenLeaderboard()
-        {
-            Debug.Log("<color=yellow>[UI] Membuka Panel Leaderboard...</color>");
+            // Berpindah ke Scene Main Menu dengan steril
+            if (Application.CanStreamedLevelBeLoaded(mainMenuSceneName))
+            {
+                SceneManager.LoadScene(mainMenuSceneName);
+            }
+            else
+            {
+                // Fallback jika Single-Scene UI
+                if (gameOverPanel != null) gameOverPanel.SetActive(false);
+                if (lobbyPanelController != null) lobbyPanelController.HideLobby();
+                if (mainMenuPanel != null) mainMenuPanel.SetActive(true);
+            }
         }
 
         public void QuitGame()

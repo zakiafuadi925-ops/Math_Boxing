@@ -44,15 +44,18 @@ namespace MathBoxing.Backend
 
         private void Awake()
         {
-            if (Instance == null)
+            if (Instance != null && Instance != this)
             {
-                Instance = this;
+                // Hancurkan HANYA komponen skrip ini
+                Destroy(this);
+                return; // LANGSUNG RETURN agar kode di bawahnya tidak berjalan!
             }
-            else
-            {
-                Destroy(this); // Hanya hancurkan komponen ini, bukan seluruh GameObject!
-                return;
-            }
+
+            Instance = this;
+            
+            transform.SetParent(null);
+            DontDestroyOnLoad(gameObject);
+
             myPlayerId = System.Guid.NewGuid().ToString();
             Debug.Log($"[Matchmaking] Player ID dikalibrasi ke UUID Steril via Awake: {myPlayerId}");
 

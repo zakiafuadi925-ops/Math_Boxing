@@ -36,7 +36,8 @@ public class AudioManager : MonoBehaviour
         if (Instance == null)
         {
             Instance = this;
-            DontDestroyOnLoad(gameObject); // Tetap aktif walau pindah Scene
+            transform.SetParent(null); // Lepas dari parent agar jadi Root GameObject
+            DontDestroyOnLoad(gameObject);
         }
         else
         {
