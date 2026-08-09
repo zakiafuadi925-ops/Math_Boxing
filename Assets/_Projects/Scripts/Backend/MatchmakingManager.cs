@@ -37,7 +37,6 @@ namespace MathBoxing.Backend
         private const string SavedMatchIdKey = "TEMP_SIMULATED_MATCH_ID";
 
         [Header("Configuration Asset")]
-        [SerializeField] private SupabaseConfig config;
         [SerializeField] private SupabaseRealtimeListener realtimeListener; 
         [SerializeField] private SupabaseManager supabaseManager;
 

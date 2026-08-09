@@ -9,30 +9,20 @@ namespace MathBoxing.Backend
         [Header("References")]
         [SerializeField] private MatchmakingManager matchmakingManager;
 
-        [Header("Configuration Asset")]
-        [SerializeField] private SupabaseConfig config; // Tarik file asset ke sini
+        [Header("Database Settings")]
         [SerializeField] private string tableName = "live_matches";
 
         private bool isListening = false;
         public int opponentScore = 0;
 
-        // --- SUNTIKAN EVENT BARU ---
+        // --- DELEGATE / EVENT ---
         public delegate void OpponentScoreChangedHandler(int newScore);
         public event OpponentScoreChangedHandler OnOpponentScoreChanged;
-
-        // ... sisa variabel dan referensi awal tetap sama ...
 
         public void StartListening()
         {
             if (matchmakingManager == null) matchmakingManager = GetComponent<MatchmakingManager>();
-            
             if (matchmakingManager == null) matchmakingManager = Object.FindAnyObjectByType<MatchmakingManager>();
-            // Jaga-jaga jika dipanggil berulang kali
-            // Di dalam skrip SupabaseRealtimeListener milikmu, saat mendeteksi P2 join:
-            if (matchmakingManager != null)
-            {
-                matchmakingManager.OnOpponentJoined();
-            }
 
             if (isListening) return; 
 
@@ -45,30 +35,32 @@ namespace MathBoxing.Backend
             isListening = false;
         }
 
-        // Otomatis dipicu oleh Unity saat kamu menekan tombol STOP di Editor
         private void OnDisable()
         {
             StopListening();
-            StopAllCoroutines(); // Menghancurkan paksa seluruh coroutine agar GC Handle tidak rusak
-            Debug.Log("<color=gray>[Listener]</color> Pipa pengawasan dimatikan dengan aman. Memori disterilkan.");
+            StopAllCoroutines();
+            Debug.Log("<color=gray>[Listener]</color> Pipa pengawasan dimatikan dengan aman.");
         }
 
         private IEnumerator PollMatchStatusCoroutine()
         {
             while (isListening)
             {
-                if (string.IsNullOrEmpty(matchmakingManager.currentMatchId))
+                // Tunggu ConfigManager dan matchId tersedia
+                if (ConfigManager.Instance == null || !ConfigManager.Instance.IsLoaded || matchmakingManager == null || string.IsNullOrEmpty(matchmakingManager.currentMatchId))
                 {
                     yield return new WaitForSeconds(1.5f);
                     continue;
                 }
 
-                string url = $"{config.supabaseURL}/rest/v1/{tableName}?match_id=eq.{matchmakingManager.currentMatchId}&select=*";
+                var configData = ConfigManager.Instance.Config;
+                // RUTE QUERY REST API SUPABASE DENGAN PARAMETER MATCH_ID
+                string url = $"{configData.supabaseURL}/rest/v1/{tableName}?match_id=eq.{matchmakingManager.currentMatchId}";
 
                 using (UnityWebRequest request = UnityWebRequest.Get(url))
                 {
-                    request.SetRequestHeader("apikey", config.supabaseApiKey);
-                    request.SetRequestHeader("Authorization", $"Bearer {config.supabaseApiKey}");
+                    request.SetRequestHeader("apikey", configData.supabaseApiKey);
+                    request.SetRequestHeader("Authorization", $"Bearer {configData.supabaseApiKey}");
 
                     yield return request.SendWebRequest();
 
@@ -76,12 +68,12 @@ namespace MathBoxing.Backend
                     {
                         string jsonResponse = request.downloadHandler.text;
 
-                        // 1. Jika kita p1 dan status masih waiting, cek apakah status berubah jadi 'active'
+                        // 1. Jika Player 1 dan status di database sudah berubah jadi 'active'
                         if (matchmakingManager.isPlayer1 && !matchmakingManager.isMatchReady)
                         {
                             if (jsonResponse.Contains("\"status\":\"active\""))
                             {
-                                matchmakingManager.isMatchReady = true;
+                                matchmakingManager.OnOpponentJoined(); // Memanggil penanda resmi bahwa lawan sudah masuk
                                 Debug.Log("<color=cyan>[Listener]</color> Player 2 telah bergabung! Pertandingan Dimulai!");
                             }
                         }
@@ -97,16 +89,19 @@ namespace MathBoxing.Backend
                                 if (parsedScore != opponentScore)
                                 {
                                     opponentScore = parsedScore;
-                                    Debug.Log($"<color=orange>[Realtime]</color> Skor musuh berubah menjadi: {opponentScore}! Petinju musuh bersiap memukul!");
-                                    // TODO: Trigger animasi petinju musuh memukul wajah kita di sini!
+                                    Debug.Log($"<color=orange>[Realtime]</color> Skor musuh berubah menjadi: {opponentScore}!");
                                     OnOpponentScoreChanged?.Invoke(opponentScore);
                                 }
                             }
                         }
                     }
+                    else
+                    {
+                        Debug.LogWarning($"[Listener] Gagal Polling: {request.error}");
+                    }
                 }
 
-                // Interval polling aman agar tidak membebani PC Ryzen-mu dan rate limit Supabase
+                // Interval polling aman 1.5 detik
                 yield return new WaitForSeconds(1.5f);
             }
         }
@@ -117,10 +112,11 @@ namespace MathBoxing.Backend
             if (keyIndex == -1) return "0";
             int startIndex = keyIndex + key.Length + 3;
             
-            // Cari pembatas koma atau kurung kurawal tutup
             int endComma = json.IndexOf(",", startIndex);
             int endBracket = json.IndexOf("}", startIndex);
             int endIndex = (endComma != -1 && endComma < endBracket) ? endComma : endBracket;
+
+            if (endIndex == -1) return "0";
 
             return json.Substring(startIndex, endIndex - startIndex).Trim();
         }

@@ -7,8 +7,7 @@ namespace MathBoxing.Backend
 {
     public class SupabaseManager : MonoBehaviour
     {
-        [Header("Configuration Asset")]
-        [SerializeField] private SupabaseConfig config; // Tarik file asset ke sini
+        [Header("Database Settings")]
         [SerializeField] private string tableName = "live_matches";
 
         public void UpdateMatchScore(string matchId, bool isPlayer1, int currentScore)
@@ -18,10 +17,21 @@ namespace MathBoxing.Backend
 
         private IEnumerator PatchScoreCoroutine(string matchId, bool isPlayer1, int currentScore)
         {
-            if (config == null) { Debug.LogError("SupabaseConfig Asset belum dipasang!"); yield break; }
+            // Tunggu ConfigManager siap
+            while (ConfigManager.Instance == null || !ConfigManager.Instance.IsLoaded)
+            {
+                yield return null;
+            }
+
+            var configData = ConfigManager.Instance.Config;
+            if (configData == null)
+            {
+                Debug.LogError("[SupabaseManager] Config Data belum dimuat!");
+                yield break;
+            }
 
             string jsonPayload = isPlayer1 ? "{\"p1_score\":" + currentScore + "}" : "{\"p2_score\":" + currentScore + "}";
-            string url = $"{config.supabaseURL}/rest/v1/{tableName}?match_id=eq.{matchId}";
+            string url = $"{configData.supabaseURL}/rest/v1/{tableName}?match_id=eq.{matchId}";
 
             using (UnityWebRequest request = new UnityWebRequest(url, "PATCH"))
             {
@@ -30,14 +40,31 @@ namespace MathBoxing.Backend
                 request.downloadHandler = new DownloadHandlerBuffer();
 
                 request.SetRequestHeader("Content-Type", "application/json");
-                request.SetRequestHeader("apikey", config.supabaseApiKey);
-                request.SetRequestHeader("Authorization", $"Bearer {config.supabaseApiKey}");
+                request.SetRequestHeader("apikey", configData.supabaseApiKey);
+                request.SetRequestHeader("Authorization", $"Bearer {configData.supabaseApiKey}");
                 request.SetRequestHeader("Prefer", "return=minimal");
 
                 yield return request.SendWebRequest();
-                if (request.result == UnityWebRequest.Result.Success) Debug.Log($"<color=green>[Supabase]</color> Skor Match Diperbarui!");
-                else Debug.LogError($"[Supabase] Gagal: {request.error}");
+
+                if (request.result == UnityWebRequest.Result.Success) 
+                    Debug.Log($"<color=green>[Supabase]</color> Skor Match Diperbarui!");
+                else 
+                    Debug.LogError($"[Supabase] Gagal Patch Skor: {request.error}");
             }
+        }
+
+        public string GetUrl()
+        {
+            return ConfigManager.Instance != null && ConfigManager.Instance.IsLoaded 
+                ? ConfigManager.Instance.Config.supabaseURL 
+                : "";
+        }
+
+        public string GetApiKey()
+        {
+            return ConfigManager.Instance != null && ConfigManager.Instance.IsLoaded 
+                ? ConfigManager.Instance.Config.supabaseApiKey 
+                : "";
         }
     }
 }
