@@ -1,7 +1,6 @@
 using UnityEngine;
 using UnityEngine.Networking;
 using System.Collections;
-using System.Collections.Generic;
 using System.Text;
 using TMPro;
 using MathBoxing.UI;
@@ -11,7 +10,7 @@ namespace MathBoxing.Backend
     public class MatchmakingManager : MonoBehaviour
     {
         [Header("Testing Rules (Untuk 2 Player)")]
-        public bool forceAsPlayer1 = true;    // CENTANG INI UNTUK JADI HOST (P1)
+        public bool forceAsPlayer1 = true;    
 
         [Header("UI Component")]
         [SerializeField] private TMP_Text matchmakingTimerText; 
@@ -19,7 +18,6 @@ namespace MathBoxing.Backend
         [Header("UI Reference")]
         [SerializeField] private LobbyPanelController lobbyPanelController;
 
-        // Variabel untuk menyimpan kode room yang baru saja dibuat
         public string CurrentRoomCode { get; private set; }
 
         [Header("Timeout Rules")]
@@ -46,27 +44,19 @@ namespace MathBoxing.Backend
         {
             if (Instance != null && Instance != this)
             {
-                Destroy(this);
+                Destroy(gameObject);
                 return;
             }
 
             Instance = this;
-
             transform.SetParent(null);
             DontDestroyOnLoad(gameObject);
 
             myPlayerId = System.Guid.NewGuid().ToString();
-            Debug.Log($"[Matchmaking] Player ID dikalibrasi ke UUID Steril via Awake: {myPlayerId}");
+            Debug.Log($"[Matchmaking] Player ID dikalibrasi ke UUID: {myPlayerId}");
 
-            if (supabaseManager == null)
-            {
-                supabaseManager = FindAnyObjectByType<SupabaseManager>();
-            }
-
-            if (realtimeListener == null)
-            {
-                realtimeListener = FindAnyObjectByType<SupabaseRealtimeListener>();
-            }
+            if (supabaseManager == null) supabaseManager = FindAnyObjectByType<SupabaseManager>();
+            if (realtimeListener == null) realtimeListener = FindAnyObjectByType<SupabaseRealtimeListener>();
         }
 
         public void FindMatch()
@@ -86,13 +76,10 @@ namespace MathBoxing.Backend
 
         public void CancelMatchmaking()
         {
-            Debug.Log("<color=red>[Matchmaking] Player membatalkan pencarian lawan secara manual!</color>");
+            Debug.Log("<color=red>[Matchmaking] Membatalkan pencarian lawan...</color>");
             
-            if (createRoomCoroutineInstance != null) 
-                StopCoroutine(createRoomCoroutineInstance);
-            
-            if (realtimeListener != null) 
-                realtimeListener.StopListening();
+            if (createRoomCoroutineInstance != null) StopCoroutine(createRoomCoroutineInstance);
+            if (realtimeListener != null) realtimeListener.StopListening();
 
             if (isPlayer1 && !string.IsNullOrEmpty(currentMatchId))
             {
@@ -141,26 +128,16 @@ namespace MathBoxing.Backend
 
         private IEnumerator CreateRoomCoroutine()
         {
-            while (ConfigManager.Instance == null || !ConfigManager.Instance.IsLoaded)
-            {
-                yield return null;
-            }
+            while (ConfigManager.Instance == null || !ConfigManager.Instance.IsLoaded) yield return null;
 
             var configData = ConfigManager.Instance.Config;
-            if (configData == null)
-            {
-                Debug.LogError("[Matchmaking] Gagal: Data Config kosong!");
-                yield break;
-            }
+            if (configData == null) yield break;
 
             currentMatchId = System.Guid.NewGuid().ToString();
             PlayerPrefs.SetString(SavedMatchIdKey, currentMatchId);
             PlayerPrefs.Save();
 
-            Debug.Log($"<color=yellow>[P1-Host]</color> Menembak Kamar Baru Berdasarkan ERD: {currentMatchId}");
-
             string url = $"{configData.supabaseURL}/rest/v1/live_matches";
-
             string jsonPayload = "{" +
                 $"\"match_id\":\"{currentMatchId}\"," +
                 $"\"p1_id\":\"{myPlayerId}\"," +
@@ -187,45 +164,26 @@ namespace MathBoxing.Backend
 
                 if (request.result == UnityWebRequest.Result.Success || request.responseCode == 201)
                 {
-                    Debug.Log($"<color=green>[Matchmaking] Room P1 tercetak di Supabase!</color>");
                     isMatchReady = false;
-
-                    if (realtimeListener != null)
-                    {
-                        realtimeListener.StartListening();
-                    }
+                    if (realtimeListener != null) realtimeListener.StartListening();
                 }
                 else
                 {
-                    Debug.LogError($"[Matchmaking] P1 GAGAL! Respon Aturan Database: {request.downloadHandler.text}");
+                    Debug.LogError($"[Matchmaking] P1 GAGAL: {request.downloadHandler.text}");
                 }
             }
         }
 
         private IEnumerator JoinRoomCoroutine(string targetMatchId)
         {
-            while (ConfigManager.Instance == null || !ConfigManager.Instance.IsLoaded)
-            {
-                yield return null;
-            }
+            while (ConfigManager.Instance == null || !ConfigManager.Instance.IsLoaded) yield return null;
 
             var configData = ConfigManager.Instance.Config;
-            if (configData == null) yield break;
-
-            if (string.IsNullOrEmpty(targetMatchId))
-            {
-                Debug.LogError("[Matchmaking] P2 GAGAL: Tidak menemukan data Room lama!");
-                yield break;
-            }
+            if (configData == null || string.IsNullOrEmpty(targetMatchId)) yield break;
 
             currentMatchId = targetMatchId;
-
             string url = $"{configData.supabaseURL}/rest/v1/live_matches?match_id=eq.{targetMatchId}";
-            
-            string jsonPayload = "{" +
-                $"\"p2_id\":\"{myPlayerId}\"," +
-                "\"status\":\"active\"" +
-                "}";
+            string jsonPayload = "{\"p2_id\":\"" + myPlayerId + "\",\"status\":\"active\"}";
 
             using (UnityWebRequest request = new UnityWebRequest(url, "PATCH"))
             {
@@ -242,28 +200,15 @@ namespace MathBoxing.Backend
 
                 if (request.result == UnityWebRequest.Result.Success || request.responseCode == 200)
                 {
-                    currentMatchId = targetMatchId;
-                    Debug.Log($"<color=green>[Matchmaking] SUKSES! Kamu masuk sebagai Player 2. Pertandingan AKTIF!</color>");
                     isMatchReady = true;
-
-                    if (realtimeListener != null)
-                    {
-                        realtimeListener.StartListening();
-                    }
-                }
-                else
-                {
-                    Debug.LogError($"[Matchmaking] P2 GAGAL! Respon: {request.downloadHandler.text}");
+                    if (realtimeListener != null) realtimeListener.StartListening();
                 }
             }
         }
 
         private IEnumerator DeleteRoomFromServerCoroutine(string matchId)
         {
-            while (ConfigManager.Instance == null || !ConfigManager.Instance.IsLoaded)
-            {
-                yield return null;
-            }
+            while (ConfigManager.Instance == null || !ConfigManager.Instance.IsLoaded) yield return null;
 
             var configData = ConfigManager.Instance.Config;
             if (configData == null) yield break;
@@ -274,46 +219,24 @@ namespace MathBoxing.Backend
             {
                 request.SetRequestHeader("apikey", configData.supabaseApiKey);
                 request.SetRequestHeader("Authorization", $"Bearer {configData.supabaseApiKey}");
-
                 yield return request.SendWebRequest();
-
-                if (request.result == UnityWebRequest.Result.Success)
-                {
-                    Debug.Log($"<color=gray>[Matchmaking] Kamar {matchId} dibersihkan.</color>");
-                }
             }
         }
-
-        // ========================================================================
-        // INTEGRASI PRIVATE ROOM (MAIN BERSAMA TEMAN)
-        // ========================================================================
 
         public void CreatePrivateRoom()
         {
             isPlayer1 = true;
             currentRoomCode = GenerateRoomCode(4);
-            Debug.Log($"<color=cyan>[Private Room] Membuat Room dengan Kode: {currentRoomCode}</color>");
-            
-            if (lobbyPanelController != null)
-            {
-                lobbyPanelController.DisplayCreatedRoomCode(currentRoomCode);
-            }
+            if (lobbyPanelController != null) lobbyPanelController.DisplayCreatedRoomCode(currentRoomCode);
             createRoomCoroutineInstance = StartCoroutine(CreatePrivateRoomCoroutine(currentRoomCode));
         }
 
         private IEnumerator CreatePrivateRoomCoroutine(string roomCode)
         {
-            while (ConfigManager.Instance == null || !ConfigManager.Instance.IsLoaded)
-            {
-                yield return null;
-            }
+            while (ConfigManager.Instance == null || !ConfigManager.Instance.IsLoaded) yield return null;
 
             var configData = ConfigManager.Instance.Config;
-            if (configData == null)
-            {
-                Debug.LogError("[Matchmaking] Gagal: Data Config kosong!");
-                yield break;
-            }
+            if (configData == null) yield break;
 
             currentMatchId = System.Guid.NewGuid().ToString();
             string url = $"{configData.supabaseURL}/rest/v1/live_matches";
@@ -345,17 +268,8 @@ namespace MathBoxing.Backend
 
                 if (request.result == UnityWebRequest.Result.Success || request.responseCode == 201)
                 {
-                    Debug.Log($"<color=green>[Private Room] Berhasil dibuat! Kode: {roomCode}</color>");
                     isMatchReady = false;
-
-                    if (realtimeListener != null)
-                    {
-                        realtimeListener.StartListening();
-                    }
-                }
-                else
-                {
-                    Debug.LogError($"[Private Room] Gagal buat room: {request.downloadHandler.text}");
+                    if (realtimeListener != null) realtimeListener.StartListening();
                 }
             }
         }
@@ -363,12 +277,7 @@ namespace MathBoxing.Backend
         public void JoinPrivateRoom(string inputCode)
         {
             inputCode = inputCode.ToUpper().Trim();
-
-            if (string.IsNullOrEmpty(inputCode))
-            {
-                Debug.LogWarning("[Private Room] Kode room tidak boleh kosong!");
-                return;
-            }
+            if (string.IsNullOrEmpty(inputCode)) return;
 
             isPlayer1 = false;
             StartCoroutine(JoinPrivateRoomCoroutine(inputCode));
@@ -376,25 +285,16 @@ namespace MathBoxing.Backend
 
         private IEnumerator JoinPrivateRoomCoroutine(string roomCode)
         {
-            while (ConfigManager.Instance == null || !ConfigManager.Instance.IsLoaded)
-            {
-                yield return null;
-            }
+            while (ConfigManager.Instance == null || !ConfigManager.Instance.IsLoaded) yield return null;
 
             var configData = ConfigManager.Instance.Config;
             if (configData == null) yield break;
-
-            Debug.Log($"<color=cyan>[Private Room]</color> Mencarikan Room dengan Kode: {roomCode}");
 
             string url = $"{configData.supabaseURL}/rest/v1/live_matches?room_code=eq.{roomCode}&status=eq.waiting";
 
             using (UnityWebRequest request = new UnityWebRequest(url, "PATCH"))
             {
-                string jsonPayload = "{" +
-                    $"\"p2_id\":\"{myPlayerId}\"," +
-                    "\"status\":\"active\"" +
-                    "}";
-
+                string jsonPayload = "{\"p2_id\":\"" + myPlayerId + "\",\"status\":\"active\"}";
                 byte[] bodyRaw = Encoding.UTF8.GetBytes(jsonPayload);
                 request.uploadHandler = new UploadHandlerRaw(bodyRaw);
                 request.downloadHandler = new DownloadHandlerBuffer();
@@ -408,56 +308,52 @@ namespace MathBoxing.Backend
 
                 string responseText = request.downloadHandler.text;
 
-                // Cek jika HTTP sukses DAN payload tidak kosong "[]"
                 if ((request.result == UnityWebRequest.Result.Success || request.responseCode == 200) && responseText != "[]")
                 {
-                    // 1. EKSTRAKSI MATCH_ID
-                    if (responseText.Contains("\"match_id\":\""))
+                    // FIX: Parsing Match ID aman dari variasi JSON Spasi/Array
+                    string extractedId = ExtractMatchIdFromJson(responseText);
+                    if (!string.IsNullOrEmpty(extractedId))
                     {
-                        int startIndex = responseText.IndexOf("\"match_id\":\"") + 12;
-                        int endIndex = responseText.IndexOf("\"", startIndex);
-                        currentMatchId = responseText.Substring(startIndex, endIndex - startIndex);
-                    }
+                        currentMatchId = extractedId;
+                        isPlayer1 = false;
+                        isMatchReady = true;
 
-                    // 2. ATUR PERAN PLAYER LOKAL & TANDA MATCH READY
-                    isPlayer1 = false;
-                    isMatchReady = true;
-
-                    Debug.Log($"<color=green>[Private Room] Berhasil join MatchID: {currentMatchId}! Game Siap!</color>");
-
-                    // 3. AKTIFKAN LISTENER REALTIME SUPABASE
-                    if (realtimeListener != null)
-                    {
-                        realtimeListener.StartListening();
+                        if (realtimeListener != null) realtimeListener.StartListening();
                     }
                     else
                     {
-                        Debug.LogWarning("[Private Room] SupabaseRealtimeListener tidak terhubung di Inspector!");
+                        Debug.LogError("[Private Room] Gagal mengekstrak Match ID dari response server!");
                     }
-                }
-                else
-                {
-                    Debug.LogError($"[Private Room] Gagal Join! Kode salah, expired, atau room penuh. Respon: {responseText}");
                 }
             }
         }
 
+        private string ExtractMatchIdFromJson(string json)
+        {
+            string pattern = "\"match_id\":";
+            int keyIndex = json.IndexOf(pattern);
+            if (keyIndex == -1) return null;
+
+            int startQuote = json.IndexOf("\"", keyIndex + pattern.Length);
+            if (startQuote == -1) return null;
+
+            int endQuote = json.IndexOf("\"", startQuote + 1);
+            if (endQuote == -1) return null;
+
+            return json.Substring(startQuote + 1, endQuote - startQuote - 1);
+        }
+
         private void OnDisable()
         {
-            // Hanya cancel jika pertandingan BELUM SIAP (mencegah room terhapus saat pindah ke gameplay)
-            if (!isMatchReady)
-            {
-                CancelMatchmaking();
-            }
+            if (!isMatchReady) CancelMatchmaking();
             StopAllCoroutines();
-            Debug.Log("<color=gray>[MatchmakingManager]</color> Coroutine jaringan dihentikan dengan aman.");
         }
 
         public void OnOpponentJoined()
         {
             if (isPlayer1)
             {
-                Debug.Log("<color=green>[Matchmaking] Sinyal Realtime Diterima! Lawan telah masuk. Pertandingan SIAP!</color>");
+                Debug.Log("<color=green>[Matchmaking] Lawan bergabung. Match Ready!</color>");
                 isMatchReady = true; 
             }
         }
