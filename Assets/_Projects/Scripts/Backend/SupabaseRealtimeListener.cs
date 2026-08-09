@@ -21,8 +21,11 @@ namespace MathBoxing.Backend
 
         public void StartListening()
         {
-            if (matchmakingManager == null) matchmakingManager = GetComponent<MatchmakingManager>();
-            if (matchmakingManager == null) matchmakingManager = Object.FindAnyObjectByType<MatchmakingManager>();
+            if (matchmakingManager == null) 
+                matchmakingManager = GetComponent<MatchmakingManager>();
+            
+            if (matchmakingManager == null) 
+                matchmakingManager = Object.FindAnyObjectByType<MatchmakingManager>();
 
             if (isListening) return; 
 
@@ -49,7 +52,7 @@ namespace MathBoxing.Backend
                 // Tunggu ConfigManager dan matchId tersedia
                 if (ConfigManager.Instance == null || !ConfigManager.Instance.IsLoaded || matchmakingManager == null || string.IsNullOrEmpty(matchmakingManager.currentMatchId))
                 {
-                    yield return new WaitForSeconds(1.5f);
+                    yield return new WaitForSeconds(1.0f);
                     continue;
                 }
 
@@ -71,10 +74,10 @@ namespace MathBoxing.Backend
                         // 1. Jika Player 1 dan status di database sudah berubah jadi 'active'
                         if (matchmakingManager.isPlayer1 && !matchmakingManager.isMatchReady)
                         {
-                            if (jsonResponse.Contains("\"status\":\"active\""))
+                            if (jsonResponse.Contains("\"status\":\"active\"") || jsonResponse.Contains("\"status\": \"active\""))
                             {
-                                matchmakingManager.OnOpponentJoined(); // Memanggil penanda resmi bahwa lawan sudah masuk
-                                Debug.Log("<color=cyan>[Listener]</color> Player 2 telah bergabung! Pertandingan Dimulai!");
+                                Debug.Log("<color=cyan>[Listener]</color> Player 2 telah bergabung! Memicu OnOpponentJoined()...");
+                                matchmakingManager.OnOpponentJoined(); // Penanda resmi lawan masuk
                             }
                         }
 
@@ -101,24 +104,36 @@ namespace MathBoxing.Backend
                     }
                 }
 
-                // Interval polling aman 1.5 detik
-                yield return new WaitForSeconds(1.5f);
+                // Interval polling 1 detik agar transisi P1 lebih cepat & responsif
+                yield return new WaitForSeconds(1.0f);
             }
         }
 
         private string ExtractNumericValue(string json, string key)
         {
-            int keyIndex = json.IndexOf($"\"{key}\":");
+            string searchPattern = $"\"{key}\":";
+            int keyIndex = json.IndexOf(searchPattern);
             if (keyIndex == -1) return "0";
-            int startIndex = keyIndex + key.Length + 3;
-            
-            int endComma = json.IndexOf(",", startIndex);
-            int endBracket = json.IndexOf("}", startIndex);
-            int endIndex = (endComma != -1 && endComma < endBracket) ? endComma : endBracket;
 
-            if (endIndex == -1) return "0";
+            // Geser index tepat setelah karakter titik dua ':'
+            int startIndex = keyIndex + searchPattern.Length;
 
-            return json.Substring(startIndex, endIndex - startIndex).Trim();
+            // Lewati spasi jika ada
+            while (startIndex < json.Length && (json[startIndex] == ' ' || json[startIndex] == '\"'))
+            {
+                startIndex++;
+            }
+
+            // Cari pembatas akhir (koma, kurung kurawal, atau petik)
+            int endIndex = startIndex;
+            while (endIndex < json.Length && char.IsDigit(json[endIndex]))
+            {
+                endIndex++;
+            }
+
+            if (startIndex == endIndex) return "0";
+
+            return json.Substring(startIndex, endIndex - startIndex);
         }
     }
 }
