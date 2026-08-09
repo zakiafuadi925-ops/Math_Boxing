@@ -417,10 +417,17 @@ namespace MathBoxing.Backend
                     Debug.Log($"<color=green>[Private Room] Berhasil join MatchID: {currentMatchId}! Game Siap!</color>");
 
                     // 3. AKTIFKAN LISTENER REALTIME SUPABASE UNTUK MATCH ID INI
-                    if (supabaseListener != null)
+                    if (supabaseManager == null)
                     {
-                        supabaseListener.StartListening(currentMatchId, isPlayer1);
+                        supabaseManager = FindAnyObjectByType<SupabaseManager>();
                     }
+
+                    // Jika kamu memiliki referensi ke SupabaseRealtimeListener (misal variabel: realtimeListener)
+                    var listener = FindAnyObjectByType<SupabaseRealtimeListener>();
+                    if (listener != null)
+                    {
+                        listener.StartListening(currentMatchId, isPlayer1);
+}
 
                     // 4. PANGGUL EVENT MATCH READY (Jika menggunakan Action/Event)
                     // OnMatchReady?.Invoke();
