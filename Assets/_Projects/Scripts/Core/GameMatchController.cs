@@ -85,6 +85,11 @@ namespace MathBoxing.Core
             if (gameOverPanel != null) gameOverPanel.SetActive(active);
         }
 
+        public void StartMatchmakingFlow()
+        {
+            StartQuickMatchFlow();
+        }
+
         public void StartQuickMatchFlow()
         {
             if (lobbyPanelController != null) lobbyPanelController.SetupForQuickMatch();
@@ -127,7 +132,6 @@ namespace MathBoxing.Core
 
                 float searchTimer = matchmakingTimeout;
 
-                // FIX: Penanganan Loop Timer yang Responsif tanpa Lag Transisi
                 while (!matchmakingManager.isMatchReady && searchTimer > 0)
                 {
                     if (lobbyPanelController != null)
@@ -198,7 +202,7 @@ namespace MathBoxing.Core
             if (mathGenerator != null)
             {
                 currentQuestion = mathGenerator.GenerateRandomQuestion();
-                if (currentQuestion != null && questionTextField != null) 
+                if (questionTextField != null) 
                 {
                     questionTextField.text = currentQuestion.questionText;
                 }
@@ -207,7 +211,7 @@ namespace MathBoxing.Core
 
         private void HandleAnswerSubmitted(int playerAnswer)
         {
-            if (!isGameActive || currentQuestion == null) return;
+            if (!isGameActive) return;
 
             bool isP1 = matchmakingManager != null ? matchmakingManager.isPlayer1 : true;
 
@@ -226,7 +230,7 @@ namespace MathBoxing.Core
                 if (myAnimator != null)
                 {
                     myAnimator.SetInteger("actionType", randomAttack);
-                    TriggerAnimatorReset(ref isP1 ? ref player1ResetCoroutine : ref player2ResetCoroutine, myAnimator);
+                    TriggerAnimatorReset(ref (isP1 ? ref player1ResetCoroutine : ref player2ResetCoroutine), myAnimator);
                 }
 
                 if (enemyAnimator != null)
@@ -241,7 +245,7 @@ namespace MathBoxing.Core
                     else
                     {
                         enemyAnimator.SetInteger("actionType", 6); 
-                        TriggerAnimatorReset(ref isP1 ? ref player2ResetCoroutine : ref player1ResetCoroutine, enemyAnimator);
+                        TriggerAnimatorReset(ref (isP1 ? ref player2ResetCoroutine : ref player1ResetCoroutine), enemyAnimator);
                         if (AudioManager.Instance != null) AudioManager.Instance.PlaySFX(AudioManager.Instance.sfxPunchHit);
                     }
                 }
@@ -272,13 +276,13 @@ namespace MathBoxing.Core
             if (enemyAnimator != null)
             {
                 enemyAnimator.SetInteger("actionType", Random.Range(1, 5));
-                TriggerAnimatorReset(ref isP1 ? ref player2ResetCoroutine : ref player1ResetCoroutine, enemyAnimator);
+                TriggerAnimatorReset(ref (isP1 ? ref player2ResetCoroutine : ref player1ResetCoroutine), enemyAnimator);
             }
 
             if (myAnimator != null)
             {
                 myAnimator.SetInteger("actionType", 6); 
-                TriggerAnimatorReset(ref isP1 ? ref player1ResetCoroutine : ref player2ResetCoroutine, myAnimator);
+                TriggerAnimatorReset(ref (isP1 ? ref player1ResetCoroutine : ref player2ResetCoroutine), myAnimator);
             }
         }
 
