@@ -427,7 +427,7 @@ namespace MathBoxing.Backend
                     if (listener != null)
                     {
                         listener.StartListening(currentMatchId, isPlayer1);
-        }
+                    }
 
                     // 4. PANGGUL EVENT MATCH READY (Jika menggunakan Action/Event)
                     // OnMatchReady?.Invoke();
