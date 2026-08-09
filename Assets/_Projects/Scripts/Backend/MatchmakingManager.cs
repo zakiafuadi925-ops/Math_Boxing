@@ -52,7 +52,7 @@ namespace MathBoxing.Backend
             }
 
             Instance = this;
-            
+
             transform.SetParent(null);
             DontDestroyOnLoad(gameObject);
 
@@ -402,7 +402,7 @@ namespace MathBoxing.Backend
                 // Cek jika HTTP sukses DAN payload tidak kosong "[]"
                 if ((request.result == UnityWebRequest.Result.Success || request.responseCode == 200) && responseText != "[]")
                 {
-                    // ESTRAKSI MATCH_ID (Parsing Sederhana dari Array Response)
+                    // 1. EKSTRAKSI MATCH_ID
                     if (responseText.Contains("\"match_id\":\""))
                     {
                         int startIndex = responseText.IndexOf("\"match_id\":\"") + 12;
@@ -410,12 +410,20 @@ namespace MathBoxing.Backend
                         currentMatchId = responseText.Substring(startIndex, endIndex - startIndex);
                     }
 
-                    Debug.Log($"<color=green>[Private Room] Berhasil join MatchID: {currentMatchId}! Game Siap!</color>");
+                    // 2. ATUR PERAN PLAYER LOKAL (Joiner pasti Player 2)
+                    isPlayer1 = false;
                     isMatchReady = true;
-                }
-                else
-                {
-                    Debug.LogError($"[Private Room] Gagal Join! Kode salah, expired, atau room penuh. Respon: {responseText}");
+
+                    Debug.Log($"<color=green>[Private Room] Berhasil join MatchID: {currentMatchId}! Game Siap!</color>");
+
+                    // 3. AKTIFKAN LISTENER REALTIME SUPABASE UNTUK MATCH ID INI
+                    if (supabaseListener != null)
+                    {
+                        supabaseListener.StartListening(currentMatchId, isPlayer1);
+                    }
+
+                    // 4. PANGGUL EVENT MATCH READY (Jika menggunakan Action/Event)
+                    // OnMatchReady?.Invoke();
                 }
             }
         }
