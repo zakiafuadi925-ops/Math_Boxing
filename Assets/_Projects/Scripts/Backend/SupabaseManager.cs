@@ -12,23 +12,16 @@ namespace MathBoxing.Backend
 
         public void UpdateMatchScore(string matchId, bool isPlayer1, int currentScore)
         {
+            if (string.IsNullOrEmpty(matchId)) return;
             StartCoroutine(PatchScoreCoroutine(matchId, isPlayer1, currentScore));
         }
 
         private IEnumerator PatchScoreCoroutine(string matchId, bool isPlayer1, int currentScore)
         {
-            // Tunggu ConfigManager siap
-            while (ConfigManager.Instance == null || !ConfigManager.Instance.IsLoaded)
-            {
-                yield return null;
-            }
+            while (ConfigManager.Instance == null || !ConfigManager.Instance.IsLoaded) yield return null;
 
             var configData = ConfigManager.Instance.Config;
-            if (configData == null)
-            {
-                Debug.LogError("[SupabaseManager] Config Data belum dimuat!");
-                yield break;
-            }
+            if (configData == null) yield break;
 
             string jsonPayload = isPlayer1 ? "{\"p1_score\":" + currentScore + "}" : "{\"p2_score\":" + currentScore + "}";
             string url = $"{configData.supabaseURL}/rest/v1/{tableName}?match_id=eq.{matchId}";
@@ -46,25 +39,11 @@ namespace MathBoxing.Backend
 
                 yield return request.SendWebRequest();
 
-                if (request.result == UnityWebRequest.Result.Success) 
-                    Debug.Log($"<color=green>[Supabase]</color> Skor Match Diperbarui!");
-                else 
+                if (request.result != UnityWebRequest.Result.Success) 
+                {
                     Debug.LogError($"[Supabase] Gagal Patch Skor: {request.error}");
+                }
             }
-        }
-
-        public string GetUrl()
-        {
-            return ConfigManager.Instance != null && ConfigManager.Instance.IsLoaded 
-                ? ConfigManager.Instance.Config.supabaseURL 
-                : "";
-        }
-
-        public string GetApiKey()
-        {
-            return ConfigManager.Instance != null && ConfigManager.Instance.IsLoaded 
-                ? ConfigManager.Instance.Config.supabaseApiKey 
-                : "";
         }
     }
 }
