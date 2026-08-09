@@ -1,7 +1,7 @@
 using UnityEngine;
 using UnityEngine.Networking;
 using System.Collections;
-using System.Collections.Generic; // TAMBAHAN: Untuk Dictionary
+using System.Collections.Generic;
 using System.Text;
 using TMPro;
 using MathBoxing.UI;
@@ -27,7 +27,7 @@ namespace MathBoxing.Backend
 
         [Header("Match Info (Output)")]
         public string currentMatchId = ""; 
-        public string currentRoomCode = ""; // TAMBAHAN: Untuk menyimpan kode private room
+        public string currentRoomCode = ""; 
         public bool isPlayer1 = false;
         public bool isMatchReady = false;
 
@@ -36,7 +36,7 @@ namespace MathBoxing.Backend
 
         private const string SavedMatchIdKey = "TEMP_SIMULATED_MATCH_ID";
 
-        [Header("Configuration Asset")]
+        [Header("References")]
         [SerializeField] private SupabaseRealtimeListener realtimeListener; 
         [SerializeField] private SupabaseManager supabaseManager;
 
@@ -132,15 +132,25 @@ namespace MathBoxing.Backend
 
         private IEnumerator CreateRoomCoroutine()
         {
-            if (config == null) { Debug.LogError("[Fatal] SupabaseConfig belum dipasang!"); yield break; }
-            
+            while (ConfigManager.Instance == null || !ConfigManager.Instance.IsLoaded)
+            {
+                yield return null;
+            }
+
+            var configData = ConfigManager.Instance.Config;
+            if (configData == null)
+            {
+                Debug.LogError("[Matchmaking] Gagal: Data Config kosong!");
+                yield break;
+            }
+
             currentMatchId = System.Guid.NewGuid().ToString();
             PlayerPrefs.SetString(SavedMatchIdKey, currentMatchId);
             PlayerPrefs.Save();
 
             Debug.Log($"<color=yellow>[P1-Host]</color> Menembak Kamar Baru Berdasarkan ERD: {currentMatchId}");
 
-            string url = $"{config.supabaseURL}/rest/v1/live_matches";
+            string url = $"{configData.supabaseURL}/rest/v1/live_matches";
 
             string jsonPayload = "{" +
                 $"\"match_id\":\"{currentMatchId}\"," +
@@ -161,8 +171,8 @@ namespace MathBoxing.Backend
                 request.downloadHandler = new DownloadHandlerBuffer();
 
                 request.SetRequestHeader("Content-Type", "application/json");
-                request.SetRequestHeader("apikey", config.supabaseApiKey);
-                request.SetRequestHeader("Authorization", $"Bearer {config.supabaseApiKey}");
+                request.SetRequestHeader("apikey", configData.supabaseApiKey);
+                request.SetRequestHeader("Authorization", $"Bearer {configData.supabaseApiKey}");
 
                 yield return request.SendWebRequest();
 
@@ -185,7 +195,14 @@ namespace MathBoxing.Backend
 
         private IEnumerator JoinRoomCoroutine(string targetMatchId)
         {
-            if (config == null) yield break;
+            while (ConfigManager.Instance == null || !ConfigManager.Instance.IsLoaded)
+            {
+                yield return null;
+            }
+
+            var configData = ConfigManager.Instance.Config;
+            if (configData == null) yield break;
+
             if (string.IsNullOrEmpty(targetMatchId))
             {
                 Debug.LogError("[Matchmaking] P2 GAGAL: Tidak menemukan data Room lama!");
@@ -194,7 +211,7 @@ namespace MathBoxing.Backend
 
             currentMatchId = targetMatchId;
 
-            string url = $"{config.supabaseURL}/rest/v1/live_matches?match_id=eq.{targetMatchId}";
+            string url = $"{configData.supabaseURL}/rest/v1/live_matches?match_id=eq.{targetMatchId}";
             
             string jsonPayload = "{" +
                 $"\"p2_id\":\"{myPlayerId}\"," +
@@ -208,8 +225,8 @@ namespace MathBoxing.Backend
                 request.downloadHandler = new DownloadHandlerBuffer();
 
                 request.SetRequestHeader("Content-Type", "application/json");
-                request.SetRequestHeader("apikey", config.supabaseApiKey);
-                request.SetRequestHeader("Authorization", $"Bearer {config.supabaseApiKey}");
+                request.SetRequestHeader("apikey", configData.supabaseApiKey);
+                request.SetRequestHeader("Authorization", $"Bearer {configData.supabaseApiKey}");
                 request.SetRequestHeader("Prefer", "return=representation");
 
                 yield return request.SendWebRequest();
@@ -229,12 +246,20 @@ namespace MathBoxing.Backend
 
         private IEnumerator DeleteRoomFromServerCoroutine(string matchId)
         {
-            string url = $"{config.supabaseURL}/rest/v1/live_matches?match_id=eq.{matchId}";
+            while (ConfigManager.Instance == null || !ConfigManager.Instance.IsLoaded)
+            {
+                yield return null;
+            }
+
+            var configData = ConfigManager.Instance.Config;
+            if (configData == null) yield break;
+
+            string url = $"{configData.supabaseURL}/rest/v1/live_matches?match_id=eq.{matchId}";
 
             using (UnityWebRequest request = new UnityWebRequest(url, "DELETE"))
             {
-                request.SetRequestHeader("apikey", config.supabaseApiKey);
-                request.SetRequestHeader("Authorization", $"Bearer {config.supabaseApiKey}");
+                request.SetRequestHeader("apikey", configData.supabaseApiKey);
+                request.SetRequestHeader("Authorization", $"Bearer {configData.supabaseApiKey}");
 
                 yield return request.SendWebRequest();
 
@@ -264,21 +289,20 @@ namespace MathBoxing.Backend
 
         private IEnumerator CreatePrivateRoomCoroutine(string roomCode)
         {
-            // Tunggu sampai ConfigManager selesai membaca file JSON
             while (ConfigManager.Instance == null || !ConfigManager.Instance.IsLoaded)
             {
                 yield return null;
             }
 
-            var config = ConfigManager.Instance.Config;
-            if (config == null)
+            var configData = ConfigManager.Instance.Config;
+            if (configData == null)
             {
                 Debug.LogError("[Matchmaking] Gagal: Data Config kosong!");
                 yield break;
             }
 
             currentMatchId = System.Guid.NewGuid().ToString();
-            string url = $"{config.supabaseURL}/rest/v1/live_matches"; // Membaca dari JSON
+            string url = $"{configData.supabaseURL}/rest/v1/live_matches";
 
             string jsonPayload = "{" +
                 $"\"match_id\":\"{currentMatchId}\"," +
@@ -300,8 +324,8 @@ namespace MathBoxing.Backend
                 request.downloadHandler = new DownloadHandlerBuffer();
 
                 request.SetRequestHeader("Content-Type", "application/json");
-                request.SetRequestHeader("apikey", config.supabaseApiKey); // Membaca dari JSON
-                request.SetRequestHeader("Authorization", $"Bearer {config.supabaseApiKey}"); // Membaca dari JSON
+                request.SetRequestHeader("apikey", configData.supabaseApiKey);
+                request.SetRequestHeader("Authorization", $"Bearer {configData.supabaseApiKey}");
 
                 yield return request.SendWebRequest();
 
@@ -338,12 +362,17 @@ namespace MathBoxing.Backend
 
         private IEnumerator JoinPrivateRoomCoroutine(string roomCode)
         {
-            if (config == null) yield break;
+            while (ConfigManager.Instance == null || !ConfigManager.Instance.IsLoaded)
+            {
+                yield return null;
+            }
+
+            var configData = ConfigManager.Instance.Config;
+            if (configData == null) yield break;
 
             Debug.Log($"<color=cyan>[Private Room]</color> Mencarikan Room dengan Kode: {roomCode}");
 
-            // Cari Match ID berdasarkan room_code yang statusnya masih 'waiting'
-            string url = $"{config.supabaseURL}/rest/v1/live_matches?room_code=eq.{roomCode}&status=eq.waiting";
+            string url = $"{configData.supabaseURL}/rest/v1/live_matches?room_code=eq.{roomCode}&status=eq.waiting";
 
             using (UnityWebRequest request = new UnityWebRequest(url, "PATCH"))
             {
@@ -357,8 +386,8 @@ namespace MathBoxing.Backend
                 request.downloadHandler = new DownloadHandlerBuffer();
 
                 request.SetRequestHeader("Content-Type", "application/json");
-                request.SetRequestHeader("apikey", config.supabaseApiKey);
-                request.SetRequestHeader("Authorization", $"Bearer {config.supabaseApiKey}");
+                request.SetRequestHeader("apikey", configData.supabaseApiKey);
+                request.SetRequestHeader("Authorization", $"Bearer {configData.supabaseApiKey}");
                 request.SetRequestHeader("Prefer", "return=representation");
 
                 yield return request.SendWebRequest();
