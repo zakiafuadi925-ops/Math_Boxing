@@ -40,23 +40,25 @@ namespace MathBoxing.Backend
         [SerializeField] private SupabaseRealtimeListener realtimeListener; 
         [SerializeField] private SupabaseManager supabaseManager;
 
+        public static MatchmakingManager Instance { get; private set; }
+
         private void Awake()
         {
+            if (Instance == null)
+            {
+                Instance = this;
+            }
+            else
+            {
+                Destroy(this); // Hanya hancurkan komponen ini, bukan seluruh GameObject!
+                return;
+            }
             myPlayerId = System.Guid.NewGuid().ToString();
             Debug.Log($"[Matchmaking] Player ID dikalibrasi ke UUID Steril via Awake: {myPlayerId}");
 
             if (supabaseManager == null)
             {
                 supabaseManager = FindAnyObjectByType<SupabaseManager>();
-            }
-
-            if (supabaseManager != null && supabaseManager.gameObject.activeInHierarchy)
-            {
-                // Steril
-            }
-            else
-            {
-                Debug.LogWarning("<color=yellow>[Matchmaking] SupabaseManager non-aktif.</color>");
             }
         }
 
@@ -392,21 +394,36 @@ namespace MathBoxing.Backend
 
                 yield return request.SendWebRequest();
 
-                if (request.result == UnityWebRequest.Result.Success || request.responseCode == 200)
+                string responseText = request.downloadHandler.text;
+
+                // Cek jika HTTP sukses DAN payload tidak kosong "[]"
+                if ((request.result == UnityWebRequest.Result.Success || request.responseCode == 200) && responseText != "[]")
                 {
-                    Debug.Log($"<color=green>[Private Room] Berhasil join ke kode {roomCode}! Game Siap!</color>");
+                    // ESTRAKSI MATCH_ID (Parsing Sederhana dari Array Response)
+                    if (responseText.Contains("\"match_id\":\""))
+                    {
+                        int startIndex = responseText.IndexOf("\"match_id\":\"") + 12;
+                        int endIndex = responseText.IndexOf("\"", startIndex);
+                        currentMatchId = responseText.Substring(startIndex, endIndex - startIndex);
+                    }
+
+                    Debug.Log($"<color=green>[Private Room] Berhasil join MatchID: {currentMatchId}! Game Siap!</color>");
                     isMatchReady = true;
                 }
                 else
                 {
-                    Debug.LogError($"[Private Room] Gagal Join! Kode salah atau room penuh. Error: {request.downloadHandler.text}");
+                    Debug.LogError($"[Private Room] Gagal Join! Kode salah, expired, atau room penuh. Respon: {responseText}");
                 }
             }
         }
 
         private void OnDisable()
         {
-            CancelMatchmaking();
+            // Hanya cancel jika pertandingan BELUM SIAP (mencegah room terhapus saat pindah ke gameplay)
+            if (!isMatchReady)
+            {
+                CancelMatchmaking();
+            }
             StopAllCoroutines();
             Debug.Log("<color=gray>[MatchmakingManager]</color> Coroutine jaringan dihentikan dengan aman.");
         }
