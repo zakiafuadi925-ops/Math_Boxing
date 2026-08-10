@@ -11,11 +11,11 @@ namespace MathBoxing.Backend
 
         [Header("Database Settings")]
         [SerializeField] private string tableName = "live_matches";
+        [SerializeField] private float pollingInterval = 1.2f;
 
         private bool isListening = false;
         public int opponentScore = 0;
 
-        // --- DELEGATE / EVENT ---
         public delegate void OpponentScoreChangedHandler(int newScore);
         public event OpponentScoreChangedHandler OnOpponentScoreChanged;
 
@@ -49,7 +49,6 @@ namespace MathBoxing.Backend
         {
             while (isListening)
             {
-                // Tunggu ConfigManager dan matchId tersedia
                 if (ConfigManager.Instance == null || !ConfigManager.Instance.IsLoaded || matchmakingManager == null || string.IsNullOrEmpty(matchmakingManager.currentMatchId))
                 {
                     yield return new WaitForSeconds(1.0f);
@@ -57,7 +56,6 @@ namespace MathBoxing.Backend
                 }
 
                 var configData = ConfigManager.Instance.Config;
-                // RUTE QUERY REST API SUPABASE DENGAN PARAMETER MATCH_ID
                 string url = $"{configData.supabaseURL}/rest/v1/{tableName}?match_id=eq.{matchmakingManager.currentMatchId}";
 
                 using (UnityWebRequest request = UnityWebRequest.Get(url))
@@ -71,17 +69,15 @@ namespace MathBoxing.Backend
                     {
                         string jsonResponse = request.downloadHandler.text;
 
-                        // 1. Jika Player 1 dan status di database sudah berubah jadi 'active'
                         if (matchmakingManager.isPlayer1 && !matchmakingManager.isMatchReady)
                         {
                             if (jsonResponse.Contains("\"status\":\"active\"") || jsonResponse.Contains("\"status\": \"active\""))
                             {
                                 Debug.Log("<color=cyan>[Listener]</color> Player 2 telah bergabung! Memicu OnOpponentJoined()...");
-                                matchmakingManager.OnOpponentJoined(); // Penanda resmi lawan masuk
+                                matchmakingManager.OnOpponentJoined();
                             }
                         }
 
-                        // 2. Intip skor musuh secara realtime
                         if (matchmakingManager.isMatchReady)
                         {
                             string scoreKey = matchmakingManager.isPlayer1 ? "p2_score" : "p1_score";
@@ -104,8 +100,7 @@ namespace MathBoxing.Backend
                     }
                 }
 
-                // Interval polling 1 detik agar transisi P1 lebih cepat & responsif
-                yield return new WaitForSeconds(1.0f);
+                yield return new WaitForSeconds(pollingInterval);
             }
         }
 
@@ -115,16 +110,13 @@ namespace MathBoxing.Backend
             int keyIndex = json.IndexOf(searchPattern);
             if (keyIndex == -1) return "0";
 
-            // Geser index tepat setelah karakter titik dua ':'
             int startIndex = keyIndex + searchPattern.Length;
 
-            // Lewati spasi jika ada
             while (startIndex < json.Length && (json[startIndex] == ' ' || json[startIndex] == '\"'))
             {
                 startIndex++;
             }
 
-            // Cari pembatas akhir (koma, kurung kurawal, atau petik)
             int endIndex = startIndex;
             while (endIndex < json.Length && char.IsDigit(json[endIndex]))
             {
