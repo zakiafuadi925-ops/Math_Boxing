@@ -4,27 +4,25 @@ using System.Collections;
 
 namespace MathBoxing.UI
 {
-    [RequireComponent(typeof(CanvasGroup))] // Memastikan CanvasGroup selalu ada secara aman
+    [RequireComponent(typeof(CanvasGroup))]
     public class NumpadController : MonoBehaviour
     {
         [Header("UI Components")]
-        [SerializeField] private TextMeshProUGUI inputDisplayTextField; // Menampilkan angka yang sedang diketik
-        [SerializeField] private CanvasGroup numpadCanvasGroup;         // Mengunci seluruh tombol saat penalti
+        [SerializeField] private TextMeshProUGUI inputDisplayTextField; 
+        [SerializeField] private CanvasGroup numpadCanvasGroup;         
 
         [Header("Settings")]
-        [SerializeField] private int maxInputLength = 5; // Batas aman digit
+        [SerializeField] private int maxInputLength = 5; 
 
         private string currentInputString = "";
         private bool isLocked = false;
         private Color originalTextColor;
 
-        // Event yang akan didengarkan oleh MathGameManager untuk validasi
         public delegate void SubmitAnswerHandler(int answer);
         public event SubmitAnswerHandler OnAnswerSubmitted;
 
-        private void Start()
+        private void Awake()
         {
-            // Validasi komponen dasar agar tidak menghasilkan NullReferenceException
             if (numpadCanvasGroup == null)
             {
                 numpadCanvasGroup = GetComponent<CanvasGroup>();
@@ -34,20 +32,23 @@ namespace MathBoxing.UI
             {
                 originalTextColor = inputDisplayTextField.color;
             }
-            else
-            {
-                Debug.LogError($"[{nameof(NumpadController)}] inputDisplayTextField belum direferensikan di Inspector!");
-            }
+        }
 
+        private void OnEnable()
+        {
+            // Pastikan state terkunci selalu di-reset saat Numpad aktif kembali
+            UnlockNumpadUI();
             ResetInput();
         }
 
-        /// <summary>
-        /// Dipanggil oleh Button 0-9 di Unity Inspector.
-        /// </summary>
+        private void OnDisable()
+        {
+            StopAllCoroutines();
+            UnlockNumpadUI();
+        }
+
         public void PressNumberButton(string number)
         {
-            // SFX Klik Angka
             if (AudioManager.Instance != null)
             {
                 AudioManager.Instance.PlaySFX(AudioManager.Instance.sfxButtonClick);
@@ -55,17 +56,10 @@ namespace MathBoxing.UI
 
             if (isLocked) return;
 
-            // Cegah input angka nol berlebih di depan (e.g., "0005" menjadi "5")
+            // Jika input hanya "0", ganti langsung dengan angka baru
             if (currentInputString == "0")
             {
                 currentInputString = number;
-                UpdateInputUI();
-                return;
-            }
-            
-            if (currentInputString == "-0")
-            {
-                currentInputString = "-" + number;
                 UpdateInputUI();
                 return;
             }
@@ -77,12 +71,8 @@ namespace MathBoxing.UI
             }
         }
 
-        /// <summary>
-        /// Dipanggil oleh tombol minus [-] untuk angka negatif.
-        /// </summary>
         public void PressMinusButton()
         {
-            // SFX Klik Angka / Tombol
             if (AudioManager.Instance != null)
             {
                 AudioManager.Instance.PlaySFX(AudioManager.Instance.sfxButtonClick);
@@ -90,7 +80,6 @@ namespace MathBoxing.UI
 
             if (isLocked) return;
 
-            // Logika toggle: Jika kosong, pasang "-". Jika sudah ada "-", hapus "-".
             if (currentInputString.Length == 0)
             {
                 currentInputString = "-";
@@ -103,13 +92,8 @@ namespace MathBoxing.UI
             UpdateInputUI();
         }
 
-        /// <summary>
-        /// Dipanggil oleh tombol [CLR] (Clear).
-        /// </summary>
-        /// 1232
         public void PressClearButton()
         {
-            // SFX Clear Button
             if (AudioManager.Instance != null)
             {
                 AudioManager.Instance.PlaySFX(AudioManager.Instance.sfxButtonClear);
@@ -119,21 +103,15 @@ namespace MathBoxing.UI
             ResetInput();
         }
 
-        /// <summary>
-        /// Dipanggil oleh tombol [ENTER] untuk mengirim jawaban.
-        /// </summary>
         public void PressEnterButton()
         {
-            // SFX Enter Button
             if (AudioManager.Instance != null)
             {
                 AudioManager.Instance.PlaySFX(AudioManager.Instance.sfxButtonEnter);
             }
 
-            // Validasi ketat: Jangan kirim jika terkunci, kosong, atau hanya berisi minus
             if (isLocked || string.IsNullOrEmpty(currentInputString) || currentInputString == "-") return;
 
-            // Konversi ke Integer secara aman tanpa resiko crash
             if (int.TryParse(currentInputString, out int submittedAnswer))
             {
                 OnAnswerSubmitted?.Invoke(submittedAnswer);
@@ -146,12 +124,8 @@ namespace MathBoxing.UI
             ResetInput();
         }
 
-        /// <summary>
-        /// Dipanggil dari GameManager jika jawaban salah (Penalti Lock 1 Detik).
-        /// </summary>
         public void TriggerWrongAnswerPenalty()
         {
-            // Bunyikan Suara Jawaban Salah / Penalti
             if (AudioManager.Instance != null)
             {
                 AudioManager.Instance.PlaySFX(AudioManager.Instance.sfxWrongAnswer);
@@ -169,8 +143,8 @@ namespace MathBoxing.UI
             
             if (numpadCanvasGroup != null)
             {
-                numpadCanvasGroup.alpha = 0.5f; // Efek visual redup
-                numpadCanvasGroup.blocksRaycasts = false; // Mencegah klik di level UI canvas secara total
+                numpadCanvasGroup.alpha = 0.5f; 
+                numpadCanvasGroup.blocksRaycasts = false; 
             }
 
             if (inputDisplayTextField != null)
@@ -179,31 +153,32 @@ namespace MathBoxing.UI
                 inputDisplayTextField.color = Color.red;
             }
 
-            yield return new WaitForSeconds(1.0f); // Durasi lock sesuai GDD
+            yield return new WaitForSeconds(1.0f); 
+
+            UnlockNumpadUI();
+            ResetInput();
+        }
+
+        private void UnlockNumpadUI()
+        {
+            isLocked = false;
 
             if (inputDisplayTextField != null)
             {
                 inputDisplayTextField.color = originalTextColor;
             }
 
-            ResetInput();
-
             if (numpadCanvasGroup != null)
             {
                 numpadCanvasGroup.alpha = 1.0f;
                 numpadCanvasGroup.blocksRaycasts = true;
             }
-
-            isLocked = false;
         }
 
         public void ResetInput()
         {
             currentInputString = "";
-            if (inputDisplayTextField != null)
-            {
-                inputDisplayTextField.text = "?";
-            }
+            UpdateInputUI();
         }
 
         private void UpdateInputUI()
