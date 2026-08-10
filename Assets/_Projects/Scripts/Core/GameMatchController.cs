@@ -39,8 +39,8 @@ namespace MathBoxing.Core
         [Header("Score System")]
         [SerializeField] private int totalScore = 0; 
 
-        private Coroutine player1ResetCoroutine;
-        private Coroutine player2ResetCoroutine;
+        private Coroutine p1ResetCoroutine;
+        private Coroutine p2ResetCoroutine;
 
         [Header("Timer Settings")]
         [SerializeField] private float timeRemaining = 60f; 
@@ -58,8 +58,22 @@ namespace MathBoxing.Core
         [Header("Scene Config")]
         [SerializeField] private string mainMenuSceneName = "01-MainMenu"; 
 
+        private void Awake()
+        {
+            FindNetworkReferences();
+        }
+
+        private void FindNetworkReferences()
+        {
+            if (matchmakingManager == null) matchmakingManager = FindAnyObjectByType<MathBoxing.Backend.MatchmakingManager>();
+            if (realtimeListener == null) realtimeListener = FindAnyObjectByType<MathBoxing.Backend.SupabaseRealtimeListener>();
+            if (supabaseManager == null) supabaseManager = FindAnyObjectByType<MathBoxing.Backend.SupabaseManager>();
+        }
+
         private void OnEnable()
         {
+            FindNetworkReferences();
+
             if (numpadController != null) numpadController.OnAnswerSubmitted += HandleAnswerSubmitted;
             if (realtimeListener != null) realtimeListener.OnOpponentScoreChanged += HandleOpponentAttacked;
         }
@@ -223,33 +237,17 @@ namespace MathBoxing.Core
                 
                 UpdateScoreDisplay(isP1, totalScore);
 
+                // Eksekusi Animasi Memukul Lokal
                 int randomAttack = Random.Range(1, 5); 
                 Animator myAnimator = isP1 ? player1Animator : player2Animator;
-                Animator enemyAnimator = isP1 ? player2Animator : player1Animator;
 
                 if (myAnimator != null)
                 {
                     myAnimator.SetInteger("actionType", randomAttack);
-                    TriggerAnimatorReset(ref (isP1 ? ref player1ResetCoroutine : ref player2ResetCoroutine), myAnimator);
+                    ResetAnimatorAction(isP1, myAnimator);
                 }
 
-                if (enemyAnimator != null)
-                {
-                    bool isEnemyBlocking = Random.value > 0.5f; 
-                    if (isEnemyBlocking)
-                    {
-                        enemyAnimator.SetBool("isBlocking", true);
-                        StartCoroutine(ResetBlockStatusCoroutine(enemyAnimator));
-                        if (AudioManager.Instance != null) AudioManager.Instance.PlaySFX(AudioManager.Instance.sfxPunchMiss);
-                    }
-                    else
-                    {
-                        enemyAnimator.SetInteger("actionType", 6); 
-                        TriggerAnimatorReset(ref (isP1 ? ref player2ResetCoroutine : ref player1ResetCoroutine), enemyAnimator);
-                        if (AudioManager.Instance != null) AudioManager.Instance.PlaySFX(AudioManager.Instance.sfxPunchHit);
-                    }
-                }
-
+                // Kirim Skor Terbaru ke Server Supabase
                 if (supabaseManager != null && matchmakingManager != null)
                 {
                     supabaseManager.UpdateMatchScore(matchmakingManager.currentMatchId, matchmakingManager.isPlayer1, totalScore);
@@ -263,6 +261,7 @@ namespace MathBoxing.Core
             }
         }
 
+        // Method ini dipicu oleh SupabaseRealtimeListener saat Skor Musuh Berubah
         private void HandleOpponentAttacked(int newOpponentScore)
         {
             if (!isGameActive) return;
@@ -273,36 +272,44 @@ namespace MathBoxing.Core
             Animator enemyAnimator = isP1 ? player2Animator : player1Animator;
             Animator myAnimator = isP1 ? player1Animator : player2Animator;
 
+            // Animasi lawan memukul
             if (enemyAnimator != null)
             {
                 enemyAnimator.SetInteger("actionType", Random.Range(1, 5));
-                TriggerAnimatorReset(ref (isP1 ? ref player2ResetCoroutine : ref player1ResetCoroutine), enemyAnimator);
+                ResetAnimatorAction(!isP1, enemyAnimator);
             }
 
+            // Animasi pemain lokal terkena dampak/pukul
             if (myAnimator != null)
             {
                 myAnimator.SetInteger("actionType", 6); 
-                TriggerAnimatorReset(ref (isP1 ? ref player1ResetCoroutine : ref player2ResetCoroutine), myAnimator);
+                ResetAnimatorAction(isP1, myAnimator);
+                if (AudioManager.Instance != null) AudioManager.Instance.PlaySFX(AudioManager.Instance.sfxPunchHit);
             }
         }
 
-        private void TriggerAnimatorReset(ref Coroutine tracker, Animator targetAnimator)
+        private void ResetAnimatorAction(bool isPlayer1, Animator targetAnimator)
         {
-            if (tracker != null) StopCoroutine(tracker);
-            tracker = StartCoroutine(ResetActionTypeCoroutine(targetAnimator));
+            if (isPlayer1)
+            {
+                if (p1ResetCoroutine != null) StopCoroutine(p1ResetCoroutine);
+                p1ResetCoroutine = StartCoroutine(ResetActionTypeCoroutine(targetAnimator, true));
+            }
+            else
+            {
+                if (p2ResetCoroutine != null) StopCoroutine(p2ResetCoroutine);
+                p2ResetCoroutine = StartCoroutine(ResetActionTypeCoroutine(targetAnimator, false));
+            }
         }
 
-        private IEnumerator ResetActionTypeCoroutine(Animator targetAnimator)
+        private IEnumerator ResetActionTypeCoroutine(Animator targetAnimator, bool isPlayer1)
         {
             yield return new WaitForSeconds(0.4f); 
             if (targetAnimator != null) targetAnimator.SetInteger("actionType", 0); 
-        }
 
-        private IEnumerator ResetBlockStatusCoroutine(Animator targetAnimator)
-        {
-            yield return new WaitForSeconds(0.3f); 
-            if (targetAnimator != null) targetAnimator.SetBool("isBlocking", false); 
-        }        
+            if (isPlayer1) p1ResetCoroutine = null;
+            else p2ResetCoroutine = null;
+        }      
         
         private void InitializeScoreUI()
         {
