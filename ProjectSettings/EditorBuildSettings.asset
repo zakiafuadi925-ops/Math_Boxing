@@ -4,5 +4,8 @@
 EditorBuildSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 2
-  m_Scenes: []
+  m_Scenes:
+  - enabled: 1
+    path: Assets/_Projects/Scenes/03_BattleRing.unity
+    guid: f73dde04f78cd694cb0349bb10f52aea
   m_configObjects: {}

@@ -435,7 +435,7 @@ TextureImporter:
         width: 108
         height: 51
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
@@ -457,7 +457,7 @@ TextureImporter:
         width: 120
         height: 49
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
@@ -479,7 +479,7 @@ TextureImporter:
         width: 94
         height: 50
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
@@ -488,6 +488,50 @@ TextureImporter:
       bones: []
       spriteID: 778a643c517ae2d44a15952da73e4a3b
       internalID: -2051503296
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ChatGPT Image Jul 5, 2026, 08_41_50 PM_18
+      rect:
+        serializedVersion: 2
+        x: 1073
+        y: 466
+        width: 127
+        height: 141
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: a29a7aee7a973b940a08561be354bcff
+      internalID: 2042633427
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ChatGPT Image Jul 5, 2026, 08_41_50 PM_19
+      rect:
+        serializedVersion: 2
+        x: 1457
+        y: 774
+        width: 29
+        height: 31
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 1ea66619a0e323749b553e1ce5a38263
+      internalID: 640244420
       vertices: []
       indices: 
       edges: []
@@ -516,6 +560,8 @@ TextureImporter:
       ChatGPT Image Jul 5, 2026, 08_41_50 PM_15: -120209126
       ChatGPT Image Jul 5, 2026, 08_41_50 PM_16: -1516136298
       ChatGPT Image Jul 5, 2026, 08_41_50 PM_17: -2051503296
+      ChatGPT Image Jul 5, 2026, 08_41_50 PM_18: 2042633427
+      ChatGPT Image Jul 5, 2026, 08_41_50 PM_19: 640244420
       ChatGPT Image Jul 5, 2026, 08_41_50 PM_2: -1508440630
       ChatGPT Image Jul 5, 2026, 08_41_50 PM_3: 1505118508
       ChatGPT Image Jul 5, 2026, 08_41_50 PM_4: 798467667
