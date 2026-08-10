@@ -10,10 +10,15 @@ namespace MathBoxing.Backend
         [Header("Database Settings")]
         [SerializeField] private string tableName = "live_matches";
 
+        private Coroutine activeScorePatchCoroutine;
+
         public void UpdateMatchScore(string matchId, bool isPlayer1, int currentScore)
         {
             if (string.IsNullOrEmpty(matchId)) return;
-            StartCoroutine(PatchScoreCoroutine(matchId, isPlayer1, currentScore));
+            
+            // Batalkan patch lama jika pemain menekan jawaban dengan cepat
+            if (activeScorePatchCoroutine != null) StopCoroutine(activeScorePatchCoroutine);
+            activeScorePatchCoroutine = StartCoroutine(PatchScoreCoroutine(matchId, isPlayer1, currentScore));
         }
 
         private IEnumerator PatchScoreCoroutine(string matchId, bool isPlayer1, int currentScore)
@@ -44,6 +49,8 @@ namespace MathBoxing.Backend
                     Debug.LogError($"[Supabase] Gagal Patch Skor: {request.error}");
                 }
             }
+
+            activeScorePatchCoroutine = null;
         }
     }
 }
