@@ -15,7 +15,7 @@ namespace MathBoxing.UI
         [SerializeField] private GameObject battleArena;
 
         [Header("Core Reference")]
-        [SerializeField] private MathBoxing.Core.GameMatchController gameMatchController;
+        [SerializeField] private GameMatchController gameMatchController;
 
         private void Start()
         {
@@ -23,7 +23,6 @@ namespace MathBoxing.UI
             {
                 AudioManager.Instance.PlayBGM(AudioManager.Instance.bgmMenu);
             }
-            // Tampilkan Main Menu di awal aplikasi dibuka
             ShowMainMenu();
         }
 
@@ -36,14 +35,13 @@ namespace MathBoxing.UI
             if (battleArena != null) battleArena.SetActive(false);
         }
 
-        // Dipanggil saat pemain menekan tombol 'PLAY / START GAME' (Quick Match)
         public void OnPlayButtonClicked()
         {
-            Debug.Log("<color=cyan>[MainMenu] Tombol PLAY ditekan!</color>");
             PlayButtonSFX();
 
             if (mainMenuPanel != null) mainMenuPanel.SetActive(false);
 
+            FindGameMatchController();
             if (gameMatchController != null)
             {
                 gameMatchController.StartQuickMatchFlow();
@@ -54,28 +52,13 @@ namespace MathBoxing.UI
             }
         }
 
-        public void OnLobbyButtonClicked()
-        {
-            PlayButtonSFX();
-
-            if (mainMenuPanel != null) mainMenuPanel.SetActive(false);
-
-            if (gameMatchController != null)
-            {
-                gameMatchController.StartMatchmakingFlow();
-            }
-            else
-            {
-                Debug.LogError("[MainMenuController] Referensi GameMatchController belum dipasang di Inspector!");
-            }
-        }
-
         public void OnPrivateMatchButtonClicked()
         {
             PlayButtonSFX();
 
             if (mainMenuPanel != null) mainMenuPanel.SetActive(false);
 
+            FindGameMatchController();
             if (gameMatchController != null)
             {
                 gameMatchController.StartPrivateMatchFlow();
@@ -89,7 +72,6 @@ namespace MathBoxing.UI
         public void OnLeaderboardButtonClicked()
         {
             PlayButtonSFX();
-            Debug.Log("<color=yellow>[MainMenu] Membuka Leaderboard...</color>");
             if (leaderboardPanel != null) leaderboardPanel.SetActive(true);
         }
 
@@ -109,7 +91,14 @@ namespace MathBoxing.UI
             Application.Quit();
         }
 
-        // Helper Method untuk SFX Klik Tombol
+        private void FindGameMatchController()
+        {
+            if (gameMatchController == null)
+            {
+                gameMatchController = FindAnyObjectByType<GameMatchController>();
+            }
+        }
+
         private void PlayButtonSFX()
         {
             if (AudioManager.Instance != null)
