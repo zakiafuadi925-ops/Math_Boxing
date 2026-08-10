@@ -35,9 +35,7 @@ namespace MathBoxing.UI
 
         [Header("Manager Reference")]
         [SerializeField] private MatchmakingManager matchmakingManager;
-        // DIHAPUS: roomCodeInputField duplikat yang ada di sini tadi!
 
-        // Delegate / Event untuk membatalkan matchmaking
         public delegate void CancelMatchmakingHandler();
         public event CancelMatchmakingHandler OnCancelMatchmakingPressed;
 
@@ -60,11 +58,17 @@ namespace MathBoxing.UI
             }
         }
 
+        private void OnDestroy()
+        {
+            if (cancelButton != null) cancelButton.onClick.RemoveAllListeners();
+            if (joinRoomButton != null) joinRoomButton.onClick.RemoveAllListeners();
+            if (createRoomButton != null) createRoomButton.onClick.RemoveAllListeners();
+        }
+
         public void ShowLobby()
         {
             if (lobbyPanelObject != null) lobbyPanelObject.SetActive(true);
             
-            // Reset Tampilan Awal Lobby
             if (player1NameText != null) player1NameText.text = "Kamu (Player 1)";
             if (player1StatusText != null) player1StatusText.text = "SIAP!";
 
@@ -89,7 +93,6 @@ namespace MathBoxing.UI
             ShowLobby();
             if (privateRoomGroup != null) privateRoomGroup.SetActive(true);
 
-            // Reset Teks & Input
             if (roomCodeDisplayText != null) roomCodeDisplayText.text = "MAIN BERSAMA TEMAN";
             if (roomCodeInputField != null)
             {
@@ -97,7 +100,6 @@ namespace MathBoxing.UI
                 roomCodeInputField.interactable = true;
             }
 
-            // Tampilkan kembali tombol
             if (createRoomButton != null) createRoomButton.gameObject.SetActive(true);
             if (joinRoomButton != null) joinRoomButton.gameObject.SetActive(true);
         }
@@ -120,13 +122,14 @@ namespace MathBoxing.UI
         private void OnCreateRoomButtonClicked()
         {
             PlayClickSFX();
+            FindMatchmakingManager();
             if (matchmakingManager != null)
             {
                 matchmakingManager.CreatePrivateRoom();
             }
             else
             {
-                Debug.LogError("[Lobby] MatchmakingManager belum dipasang di Inspector!");
+                Debug.LogError("[Lobby] MatchmakingManager tidak ditemukan di scene!");
             }
         }
 
@@ -148,15 +151,14 @@ namespace MathBoxing.UI
                 return;
             }
 
-            Debug.Log($"<color=yellow>[Lobby] Menekan Join. Mengirim kode: '{inputCode}' ke Supabase...</color>");
-            
+            FindMatchmakingManager();
             if (matchmakingManager != null)
             {
                 matchmakingManager.JoinPrivateRoom(inputCode);
             }
             else
             {
-                Debug.LogError("[Lobby] MatchmakingManager belum di-assign di Inspector!");
+                Debug.LogError("[Lobby] MatchmakingManager tidak ditemukan di scene!");
             }
         }
 
@@ -167,8 +169,24 @@ namespace MathBoxing.UI
                 AudioManager.Instance.PlaySFX(AudioManager.Instance.sfxButtonClear);
             }
 
+            // Hentikan proses matchmaking backend secara langsung
+            FindMatchmakingManager();
+            if (matchmakingManager != null)
+            {
+                matchmakingManager.CancelMatchmaking();
+            }
+
             OnCancelMatchmakingPressed?.Invoke();
             HideLobby();
+        }
+
+        private void FindMatchmakingManager()
+        {
+            if (matchmakingManager == null)
+            {
+                matchmakingManager = MatchmakingManager.Instance != null ? 
+                    MatchmakingManager.Instance : FindAnyObjectByType<MatchmakingManager>();
+            }
         }
 
         private void PlayClickSFX()
