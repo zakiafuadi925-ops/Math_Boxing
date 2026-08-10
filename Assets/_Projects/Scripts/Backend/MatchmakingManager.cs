@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.Networking;
+using System;
 using System.Collections;
 using System.Text;
 using TMPro;
@@ -14,11 +15,7 @@ namespace MathBoxing.Backend
 
         [Header("UI Component")]
         [SerializeField] private TMP_Text matchmakingTimerText; 
-
-        [Header("UI Reference")]
         [SerializeField] private LobbyPanelController lobbyPanelController;
-
-        public string CurrentRoomCode { get; private set; }
 
         [Header("Timeout Rules")]
         public float matchmakingTimeout = 30f; 
@@ -40,6 +37,20 @@ namespace MathBoxing.Backend
 
         public static MatchmakingManager Instance { get; private set; }
 
+        [Serializable]
+        private class MatchData
+        {
+            public string match_id;
+            public string room_code;
+            public string status;
+        }
+
+        [Serializable]
+        private class MatchDataListWrapper
+        {
+            public MatchData[] items;
+        }
+
         private void Awake()
         {
             if (Instance != null && Instance != this)
@@ -52,15 +63,27 @@ namespace MathBoxing.Backend
             transform.SetParent(null);
             DontDestroyOnLoad(gameObject);
 
-            myPlayerId = System.Guid.NewGuid().ToString();
+            myPlayerId = Guid.NewGuid().ToString();
             Debug.Log($"[Matchmaking] Player ID dikalibrasi ke UUID: {myPlayerId}");
 
+            FindReferences();
+        }
+
+        public void FindReferences()
+        {
             if (supabaseManager == null) supabaseManager = FindAnyObjectByType<SupabaseManager>();
             if (realtimeListener == null) realtimeListener = FindAnyObjectByType<SupabaseRealtimeListener>();
         }
 
+        public void BindUIReferences(TMP_Text timerText, LobbyPanelController lobbyController)
+        {
+            matchmakingTimerText = timerText;
+            lobbyPanelController = lobbyController;
+        }
+
         public void FindMatch()
         {
+            FindReferences();
             if (forceAsPlayer1)
             {
                 isPlayer1 = true;
@@ -133,7 +156,7 @@ namespace MathBoxing.Backend
             var configData = ConfigManager.Instance.Config;
             if (configData == null) yield break;
 
-            currentMatchId = System.Guid.NewGuid().ToString();
+            currentMatchId = Guid.NewGuid().ToString();
             PlayerPrefs.SetString(SavedMatchIdKey, currentMatchId);
             PlayerPrefs.Save();
 
@@ -225,6 +248,7 @@ namespace MathBoxing.Backend
 
         public void CreatePrivateRoom()
         {
+            FindReferences();
             isPlayer1 = true;
             currentRoomCode = GenerateRoomCode(4);
             if (lobbyPanelController != null) lobbyPanelController.DisplayCreatedRoomCode(currentRoomCode);
@@ -238,7 +262,7 @@ namespace MathBoxing.Backend
             var configData = ConfigManager.Instance.Config;
             if (configData == null) yield break;
 
-            currentMatchId = System.Guid.NewGuid().ToString();
+            currentMatchId = Guid.NewGuid().ToString();
             string url = $"{configData.supabaseURL}/rest/v1/live_matches";
 
             string jsonPayload = "{" +
@@ -276,6 +300,7 @@ namespace MathBoxing.Backend
 
         public void JoinPrivateRoom(string inputCode)
         {
+            FindReferences();
             inputCode = inputCode.ToUpper().Trim();
             if (string.IsNullOrEmpty(inputCode)) return;
 
@@ -310,7 +335,6 @@ namespace MathBoxing.Backend
 
                 if ((request.result == UnityWebRequest.Result.Success || request.responseCode == 200) && responseText != "[]")
                 {
-                    // FIX: Parsing Match ID aman dari variasi JSON Spasi/Array
                     string extractedId = ExtractMatchIdFromJson(responseText);
                     if (!string.IsNullOrEmpty(extractedId))
                     {
@@ -330,6 +354,21 @@ namespace MathBoxing.Backend
 
         private string ExtractMatchIdFromJson(string json)
         {
+            try
+            {
+                string wrappedJson = "{\"items\":" + json + "}";
+                MatchDataListWrapper parsed = JsonUtility.FromJson<MatchDataListWrapper>(wrappedJson);
+                if (parsed != null && parsed.items != null && parsed.items.Length > 0)
+                {
+                    return parsed.items[0].match_id;
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"[JSON Parse Exception] Fallback ke string search: {ex.Message}");
+            }
+
+            // Fallback manual jika format bukan array
             string pattern = "\"match_id\":";
             int keyIndex = json.IndexOf(pattern);
             if (keyIndex == -1) return null;
